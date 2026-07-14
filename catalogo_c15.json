@@ -1,0 +1,215 @@
+{
+  "ramal": "C15",
+  "nombre": "Perico – Pocitos",
+  "up": "Salta",
+  "km_inicio": 1120.846,
+  "km_fin": 1455.362,
+  "resolucion_m": 1,
+  "estado": "CANDIDATO_NO_PUBLICABLE",
+  "bloques": [
+    {
+      "archivo": "c15_1120.json",
+      "desde": 1120.846,
+      "hasta": 1129.999,
+      "puntos": 9154
+    },
+    {
+      "archivo": "c15_1130.json",
+      "desde": 1130.0,
+      "hasta": 1139.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1140.json",
+      "desde": 1140.0,
+      "hasta": 1149.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1150.json",
+      "desde": 1150.0,
+      "hasta": 1159.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1160.json",
+      "desde": 1160.0,
+      "hasta": 1169.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1170.json",
+      "desde": 1170.0,
+      "hasta": 1179.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1180.json",
+      "desde": 1180.0,
+      "hasta": 1189.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1190.json",
+      "desde": 1190.0,
+      "hasta": 1199.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1200.json",
+      "desde": 1200.0,
+      "hasta": 1209.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1210.json",
+      "desde": 1210.0,
+      "hasta": 1219.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1220.json",
+      "desde": 1220.0,
+      "hasta": 1229.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1230.json",
+      "desde": 1230.0,
+      "hasta": 1239.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1240.json",
+      "desde": 1240.0,
+      "hasta": 1249.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1250.json",
+      "desde": 1250.0,
+      "hasta": 1259.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1260.json",
+      "desde": 1260.0,
+      "hasta": 1269.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1270.json",
+      "desde": 1270.0,
+      "hasta": 1279.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1280.json",
+      "desde": 1280.0,
+      "hasta": 1289.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1290.json",
+      "desde": 1290.0,
+      "hasta": 1299.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1300.json",
+      "desde": 1300.0,
+      "hasta": 1309.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1310.json",
+      "desde": 1310.0,
+      "hasta": 1319.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1320.json",
+      "desde": 1320.0,
+      "hasta": 1329.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1330.json",
+      "desde": 1330.0,
+      "hasta": 1339.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1340.json",
+      "desde": 1340.0,
+      "hasta": 1349.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1350.json",
+      "desde": 1350.0,
+      "hasta": 1359.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1360.json",
+      "desde": 1360.0,
+      "hasta": 1369.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1370.json",
+      "desde": 1370.0,
+      "hasta": 1379.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1380.json",
+      "desde": 1380.0,
+      "hasta": 1389.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1390.json",
+      "desde": 1390.0,
+      "hasta": 1399.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1400.json",
+      "desde": 1400.0,
+      "hasta": 1409.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1410.json",
+      "desde": 1410.0,
+      "hasta": 1419.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1420.json",
+      "desde": 1420.0,
+      "hasta": 1429.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1430.json",
+      "desde": 1430.0,
+      "hasta": 1439.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1440.json",
+      "desde": 1440.0,
+      "hasta": 1449.999,
+      "puntos": 10000
+    },
+    {
+      "archivo": "c15_1450.json",
+      "desde": 1450.0,
+      "hasta": 1455.362,
+      "puntos": 5363
+    }
+  ]
+}
