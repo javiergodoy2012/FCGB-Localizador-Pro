@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Localizador Kilométrico UP Salta</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --bg:#050b13;--panel:#0a1321;--panel2:#0e1828;--line:#1d2b3e;
+  --text:#edf3fb;--muted:#8fa1b8;--blue:#1261cc;--blue2:#1e71ee;--yellow:#ffc928;
+  --green:#52c56b;--danger:#ff5148;--shadow:0 16px 40px rgba(0,0,0,.3)
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:radial-gradient(circle at 70% 0,#0a1626 0,#050b13 48%,#03070d 100%);color:var(--text);font-family:Inter,Arial,sans-serif}
+button,input,select{font:inherit}
+.app{min-height:100vh;display:grid;grid-template-rows:auto auto 1fr auto}
+.topbar{display:grid;grid-template-columns:260px 1fr auto;gap:20px;align-items:center;padding:14px 20px;background:linear-gradient(90deg,#04080e,#091321 72%,#07101b);border-bottom:1px solid #152238}
+.logo-box{height:76px;background:#020406;border:1px solid #0c1119;border-radius:6px;display:flex;align-items:center;padding:18px 20px;box-shadow:inset 0 0 30px #000}
+.logo-mark{border-left:3px solid #fff;padding-left:13px;font-weight:800;line-height:1.05;font-size:18px;letter-spacing:.4px}
+.title-wrap h1{margin:0;font-size:27px;letter-spacing:.2px;text-transform:uppercase;color:var(--yellow)}
+.title-wrap h2{margin:8px 0 0;color:#3d98ff;font-size:19px}
+.stats-top{display:grid;grid-template-columns:repeat(4,150px);gap:10px}
+.stat-card{background:linear-gradient(180deg,#0f1928,#0a121e);border:1px solid #1d2b3f;border-radius:8px;padding:11px 14px;min-height:72px}
+.stat-card small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.7px}
+.stat-card strong{display:block;margin-top:5px;font-size:22px}
+.rail-stripe{height:6px;background:repeating-linear-gradient(90deg,#1a5fd0 0 14px,transparent 14px 22px,#f1c32c 22px 36px,transparent 36px 44px)}
+.main{display:grid;grid-template-columns:440px 1fr;gap:14px;padding:14px}
+.sidebar{background:linear-gradient(180deg,#0d1727,#09111d);border:1px solid var(--line);border-radius:9px;padding:18px;box-shadow:var(--shadow)}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.tab{border:1px solid #1e2d43;border-radius:6px;background:#111c2d;color:#a9bad0;padding:13px;font-weight:700}
+.tab.active{background:linear-gradient(180deg,#1d66d0,#1553b3);color:#fff}
+.field-label{display:flex;align-items:center;gap:10px;color:#9fb0c4;text-transform:uppercase;font-size:12px;letter-spacing:.8px;margin:15px 0 8px}
+.field-label:after{content:"";height:1px;background:#243146;flex:1}
+select,input{width:100%;background:#060b13;color:white;border:1px solid #2b394e;border-radius:6px;padding:13px 14px;outline:none}
+.pk-wrap{display:grid;grid-template-columns:60px 1fr 42px}
+.pk-prefix{display:flex;align-items:center;justify-content:center;border:1px solid #2b394e;border-right:0;border-radius:6px 0 0 6px;color:#9caec3;background:#0b1421}
+.pk-wrap input{border-radius:0}
+.clear{border:1px solid #2b394e;border-left:0;border-radius:0 6px 6px 0;background:#0b1421;color:#a8bad0}
+.primary{width:100%;margin-top:13px;padding:14px;border:0;border-radius:6px;color:white;font-weight:800;background:linear-gradient(180deg,#2469d0,#1453b7)}
+.result{margin-top:14px;border:1px solid #2a394e;border-radius:7px;padding:16px;background:#050b13}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{font-size:12px;border-radius:4px;padding:5px 8px;background:#153d76;color:#b8d7ff}
+.badge.up{background:#40205f;color:#e5baff} .badge.r{background:#123e25;color:#83e7a2} .badge.state{background:#4a3c06;color:#ffdc57}
+.result h3{font-size:31px;margin:16px 0 12px}
+.result h3 span{color:var(--yellow);font-size:16px}
+.coords-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.data-box{border:1px solid #1f2b3d;background:#0a111c;border-radius:6px;padding:12px}
+.data-box small{color:#7e93ac;text-transform:uppercase} .data-box strong{display:block;margin-top:6px;color:var(--yellow);font-size:18px}
+.coord-full{margin-top:9px;border:1px solid #1f2b3d;background:#0a111c;border-radius:6px;padding:12px}
+.action-row{display:flex;gap:8px;margin-top:10px}
+.secondary{flex:1;padding:11px;border-radius:6px;border:1px solid #27374c;background:#0b1522;color:#d6e2ef}
+.gmaps{display:block;text-align:center;margin-top:12px;background:linear-gradient(180deg,#2469d0,#1453b7);padding:13px;border-radius:6px;color:white;text-decoration:none;font-weight:800}
+.content{display:grid;grid-template-rows:auto 1fr auto;gap:12px;min-width:0}
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);background:linear-gradient(180deg,#0d1623,#09111b);border:1px solid var(--line);border-radius:9px;padding:10px 6px}
+.metric{padding:7px 14px;border-right:1px solid #223146} .metric:last-child{border-right:0}
+.metric small{color:#899cb3;text-transform:uppercase;font-size:10px} .metric strong{display:block;margin-top:4px;font-size:21px}
+.map-card{position:relative;border:1px solid var(--line);border-radius:9px;overflow:hidden;min-height:600px;background:#0a111a}
+#map{height:100%;min-height:600px}
+.map-controls{position:absolute;z-index:700;left:12px;top:12px;background:rgba(7,13,22,.94);border:1px solid #28364a;border-radius:7px;padding:10px 12px;box-shadow:var(--shadow)}
+.map-controls label{display:block;margin:6px 0;color:#d6e2f1;font-size:13px}
+.legend{position:absolute;z-index:700;right:14px;bottom:14px;background:rgba(6,12,20,.95);border:1px solid #2c3a50;border-radius:7px;padding:12px;width:190px}
+.legend h4{margin:0 0 8px;color:#c8d5e6;font-size:12px;text-transform:uppercase}
+.legend-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12px}
+.swatch{width:18px;height:4px;border-radius:4px}
+.info-bar{display:grid;grid-template-columns:1.1fr 1fr 1.2fr 1.2fr 1fr;background:linear-gradient(180deg,#0c1522,#08101a);border:1px solid var(--line);border-radius:9px}
+.info-item{padding:14px;border-right:1px solid #213045;font-size:12px;line-height:1.45;color:#a9b8c9} .info-item:last-child{border-right:0}
+.info-item b{display:block;color:#e5edf7;margin-bottom:5px;text-transform:uppercase;font-size:11px}
+.footer{display:flex;justify-content:flex-end;padding:0 24px 14px;color:var(--yellow);font-style:italic;font-size:16px}
+@media(max-width:1200px){
+  .topbar{grid-template-columns:220px 1fr} .stats-top{grid-column:1/-1;grid-template-columns:repeat(4,1fr)}
+  .main{grid-template-columns:380px 1fr} .metrics{grid-template-columns:repeat(3,1fr)} .metric{border-bottom:1px solid #223146}
+}
+@media(max-width:850px){
+  .topbar{grid-template-columns:1fr} .logo-box{width:220px} .stats-top{grid-template-columns:repeat(2,1fr)}
+  .main{grid-template-columns:1fr} .map-card,#map{min-height:520px} .metrics{grid-template-columns:repeat(2,1fr)}
+  .info-bar{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+  <div class="logo-box"><div class="logo-mark">TRENES ARGENTINOS<br>CARGAS</div></div>
+  <div class="title-wrap"><h1>Localizador Kilométrico UP Salta</h1><h2>Trenes Argentinos Cargas</h2></div>
+  <div class="stats-top">
+    <div class="stat-card"><small>Ramales</small><strong>7</strong></div>
+    <div class="stat-card"><small>Resolución</small><strong>1 m</strong></div>
+    <div class="stat-card"><small>UP activa</small><strong>SALTA</strong></div>
+    <div class="stat-card"><small>Estado base</small><strong>CANDIDATA</strong></div>
+  </div>
+</header>
+<div class="rail-stripe"></div>
+
+<main class="main">
+  <aside class="sidebar">
+    <div class="tabs"><button class="tab active">⌖ LOCALIZADOR KM</button><button class="tab">▣ BUSCADOR ESTACIONES</button></div>
+    <div class="field-label">Unidad de Producción</div>
+    <select id="up"><option>UP Salta</option></select>
+    <div class="field-label">Selección de ramal</div>
+    <select id="ramal"></select>
+    <div class="field-label">Progresiva kilométrica (PK)</div>
+    <div class="pk-wrap"><div class="pk-prefix">km</div><input id="km" inputmode="decimal"><button class="clear" id="clear">×</button></div>
+    <button class="primary" id="buscar">⌖ OBTENER COORDENADAS</button>
+    <div id="status" class="status">Cargando catálogo…</div>
+
+    <section class="result" id="resultado" hidden>
+      <div class="badges"><span class="badge">TAC</span><span class="badge up">UP Salta</span><span class="badge r" id="badgeRamal"></span><span class="badge state">CANDIDATA</span></div>
+      <h3 id="rkm"></h3>
+      <div class="coords-grid">
+        <div class="data-box"><small>Latitud</small><strong id="lat"></strong></div>
+        <div class="data-box"><small>Longitud</small><strong id="lon"></strong></div>
+      </div>
+      <div class="coord-full"><small>Coordenada (lat, lon)</small><div id="coord"></div></div>
+      <div class="action-row"><button class="secondary" id="copy">Copiar coordenada</button><button class="secondary" id="center">Centrar mapa</button></div>
+      <div id="detalle" style="margin-top:12px;color:#b8c5d5"></div>
+      <a class="gmaps" id="gmap" target="_blank" rel="noopener">VER EN GOOGLE MAPS ↗</a>
+    </section>
+  </aside>
+
+  <section class="content">
+    <div class="metrics">
+      <div class="metric"><small>KM totales</small><strong>2,241.6</strong></div>
+      <div class="metric"><small>Puntos cargados</small><strong>2,241,624</strong></div>
+      <div class="metric"><small>Estaciones</small><strong>—</strong></div>
+      <div class="metric"><small>Empalmes</small><strong>—</strong></div>
+      <div class="metric"><small>Ramales validados</small><strong>0</strong></div>
+      <div class="metric"><small>Ramales pendientes</small><strong>7</strong></div>
+    </div>
+
+    <div class="map-card">
+      <div id="map"></div>
+      <div class="map-controls">
+        <label><input type="radio" name="base" value="osm" checked> OpenStreetMap</label>
+        <label><input type="radio" name="base" value="rail"> OpenRailwayMap</label>
+        <label><input type="radio" name="base" value="sat"> Satélite</label>
+      </div>
+      <div class="legend"><h4>Referencias</h4>
+        <div class="legend-row"><span class="swatch" style="background:#24b7df"></span>C14 · Cerrillos – Socompa</div><div class="legend-row"><span class="swatch" style="background:#47c65c"></span>C15 · Perico – Pocitos</div><div class="legend-row"><span class="swatch" style="background:#b54cff"></span>C · Línea C · km 980 – La Quiaca</div><div class="legend-row"><span class="swatch" style="background:#f6bd17"></span>C13 · General Güemes – Cerrillos</div><div class="legend-row"><span class="swatch" style="background:#3477ff"></span>C18 · km 1186 – Pichanal</div><div class="legend-row"><span class="swatch" style="background:#ff4a3d"></span>C16 · Pichanal – Orán</div><div class="legend-row"><span class="swatch" style="background:#ff7a18"></span>C25 · Embarcación – Formosa</div>
+      </div>
+    </div>
+
+    <div class="info-bar">
+      <div class="info-item"><b>Estado de la base</b>Base candidata en validación. La información puede estar sujeta a modificaciones.</div>
+      <div class="info-item"><b>Fuente PK</b>TAC · Trenes Argentinos Cargas. Kilometraje oficial de vía.</div>
+      <div class="info-item"><b>Fuente geométrica</b>Ferromapas + OpenStreetMap/OpenRailwayMap como contraste.</div>
+      <div class="info-item"><b>Observaciones</b>C16: extremos preliminares. C25: división exacta por UP pendiente.</div>
+      <div class="info-item"><b>Contacto</b>Coordinación Regional de Seguridad Patrimonial · UP Salta</div>
+    </div>
+  </section>
+</main>
+<footer class="footer">By AJGodoy</footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let CAT=null, marker=null, cache=new Map(), lastPoint=null;
+
+const map=L.map('map',{zoomControl:false}).setView([-24.5,-64.8],6);
+L.control.zoom({position:'topright'}).addTo(map);
+
+const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+const rail=L.tileLayer('https://tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png',{maxZoom:19,opacity:.7,attribution:'OpenRailwayMap'});
+const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'});
+
+document.querySelectorAll('input[name="base"]').forEach(el=>el.addEventListener('change',e=>{
+  [osm,rail,sat].forEach(l=>map.removeLayer(l));
+  (e.target.value==='rail'?rail:e.target.value==='sat'?sat:osm).addTo(map);
+}));
+
+function parseKm(v){return Number(String(v).replace(',','.').trim())}
+function meta(){return CAT.ramales.find(x=>x.ramal===$('ramal').value)}
+async function init(){
+  CAT=await (await fetch('data/catalogo.json')).json();
+  for(const r of CAT.ramales){
+    const o=document.createElement('option');
+    o.value=r.ramal;o.textContent=`Ramal ${r.ramal} · ${r.km_inicio.toFixed(3)} → ${r.km_fin.toFixed(3)}`;
+    $('ramal').appendChild(o);
+  }
+  $('ramal').value='C15';
+  changeRamal();
+}
+function changeRamal(){
+  const m=meta();
+  $('km').value=m.km_inicio.toFixed(3).replace('.',',');
+  $('status').textContent=`Rango ${m.ramal}: km ${m.km_inicio.toFixed(3).replace('.',',')} a ${m.km_fin.toFixed(3).replace('.',',')}.`;
+  $('resultado').hidden=true;
+}
+async function loadBlock(m,k){
+  const block=m.bloques.find(x=>x.desde<=k&&k<=x.hasta);
+  if(!block)return null;
+  if(!cache.has(block.archivo)){
+    const response=await fetch('data/'+block.archivo);
+    if(!response.ok)throw new Error('No se pudo cargar '+block.archivo);
+    cache.set(block.archivo,await response.json());
+  }
+  return cache.get(block.archivo);
+}
+function findPoint(arr,k){
+  let lo=0,hi=arr.length-1;
+  while(lo<=hi){
+    const mid=(lo+hi)>>1,v=arr[mid][0];
+    if(Math.abs(v-k)<.0005)return arr[mid];
+    if(v<k)lo=mid+1;else hi=mid-1;
+  }
+  return null;
+}
+async function buscar(){
+  const m=meta(),k0=parseKm($('km').value);
+  if(!Number.isFinite(k0)||k0<m.km_inicio||k0>m.km_fin){
+    $('status').textContent='PK fuera del rango del ramal.';return;
+  }
+  const k=Math.round(k0*1000)/1000;
+  $('status').textContent='Cargando bloque…';
+  const b=await loadBlock(m,k),p=b&&findPoint(b.puntos,k);
+  if(!p){$('status').textContent='No se encontró ese metro.';return}
+  const [pk,lat,lon]=p;
+  lastPoint={pk,lat,lon,ramal:m.ramal};
+  $('resultado').hidden=false;
+  $('badgeRamal').textContent='Ramal '+m.ramal;
+  $('rkm').innerHTML=`km ${pk.toFixed(3).replace('.',',')} <span>${m.ramal}</span>`;
+  $('lat').textContent=lat.toFixed(7);$('lon').textContent=lon.toFixed(7);
+  $('coord').textContent=lat.toFixed(7)+', '+lon.toFixed(7);
+  $('detalle').innerHTML=`Ramal <b>${m.ramal}</b> · UP Salta<br>${m.nota}`;
+  $('gmap').href='https://www.google.com/maps?q='+lat+','+lon;
+  if(marker)marker.remove();
+  marker=L.marker([lat,lon]).addTo(map).bindPopup(`${m.ramal} · km ${pk.toFixed(3)}`).openPopup();
+  map.setView([lat,lon],17);
+  $('status').textContent='Resultado encontrado.';
+}
+$('ramal').addEventListener('change',changeRamal);
+$('buscar').addEventListener('click',buscar);
+$('km').addEventListener('keydown',e=>{if(e.key==='Enter')buscar()});
+$('clear').addEventListener('click',()=>{$('km').value='';$('resultado').hidden=true;$('status').textContent='Ingresá una progresiva.'});
+$('copy').addEventListener('click',async()=>{if(lastPoint)await navigator.clipboard.writeText(lastPoint.lat.toFixed(7)+', '+lastPoint.lon.toFixed(7))});
+$('center').addEventListener('click',()=>{if(lastPoint)map.setView([lastPoint.lat,lastPoint.lon],17)});
+init();
+</script>
+</body>
+</html>
