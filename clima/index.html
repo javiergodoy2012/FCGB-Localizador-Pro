@@ -2899,7 +2899,8 @@ async function sendReportWhatsApp(){
   if(!blob){toast('No se pudo crear la matriz','err');return;}
   const filename=`Pronostico_Site_Vision_23_localidades_${todayStr()}.png`;
   const file=new File([blob],filename,{type:'image/png'});
-  if(navigator.share&&navigator.canShare?.({files:[file]})){
+  const mobileShare=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(mobileShare&&navigator.share&&navigator.canShare?.({files:[file]})){
     try{await navigator.share({title:'Site Visión · Pronóstico de 7 días',text:'Pronóstico de las 23 localidades de UP Salta',files:[file]});addLog('Matriz meteorológica compartida');toast('✅ Matriz preparada para compartir','ok');return;}catch(error){if(error?.name==='AbortError')return;}
   }
   const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);window.open(COMMUNITY_URL,'_blank','noopener,noreferrer');addLog('Matriz meteorológica descargada para la Comunidad');toast('🖼️ Matriz descargada. Adjuntala en la Comunidad.','ok');
