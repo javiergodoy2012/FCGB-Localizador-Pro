@@ -859,7 +859,7 @@ body.modal-open{overflow:hidden;}
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-ghost btn-sm" onclick="generateReport()">🔄 Generar Ahora</button>
       <button class="btn btn-ghost btn-sm" onclick="exportReportExcel()">📊 Excel completo · 7 días</button>
-      <button class="btn btn-primary btn-sm" onclick="sendReportWhatsApp()">🔒 Compartir en Comunidad</button>
+      <button class="btn btn-primary btn-sm" onclick="sendReportWhatsApp()">🖼️ Crear tarjeta 7 días</button>
     </div>
   </div>
   <div class="report-summary" id="report-summary">
@@ -2769,59 +2769,170 @@ function exportReportExcel(){
   toast('📊 Excel completo descargado correctamente','ok');
 }
 
-// ── SEND REPORT VIA WHATSAPP ──
-function sendReportWhatsApp(){
-  if(!window._lastReportRows){ toast('Generá el reporte primero','err'); return; }
-  const meta=window._lastReportMeta;
-  let msg=`🌦️ *CLIMA ALERT — UP SALTA*\n🕐 ${meta.now} · Próximas 48 h\n*Estado general: ${meta.general}*\n\n`;
+// ── TARJETA DE PRONÓSTICO PARA LA COMUNIDAD ──
+function communityForecastCondition(rain, probability){
+  if(rain>=10 || probability>=70) return {emoji:'🌧️',label:'Lluvias',color:'#38BDF8'};
+  if(rain>=1 || probability>=45) return {emoji:'🌦️',label:'Inestable',color:'#60A5FA'};
+  if(probability>=25) return {emoji:'☁️',label:'Nublado',color:'#94A3B8'};
+  return {emoji:'☀️',label:'Despejado',color:'#FBBF24'};
+}
 
-  // WhatsApp se resume por ramal: una sola línea operativa por grupo,
-  // sin enumerar todas las localidades incluidas en el reporte completo.
-  const ramales = window._lastReportRows.reduce((groups,row)=>{
-    const ramal=row.info.ramal||'Sin ramal';
-    (groups[ramal]||(groups[ramal]=[])).push(row);
-    return groups;
-  },{});
-  const ramalOrder=['C','C / C12','C13','C14','C / C15','C15','C18'];
-  Object.keys(ramales).sort((a,b)=>{
-    const ai=ramalOrder.indexOf(a), bi=ramalOrder.indexOf(b);
-    return (ai<0?999:ai)-(bi<0?999:bi)||a.localeCompare(b);
-  }).forEach(ramal=>{
-    const rows=ramales[ramal];
-    const available=rows.filter(r=>!r.missing);
-    if(!available.length){ msg+=`⚪ *Ramal ${ramal}:* sin datos.\n`; return; }
-    const maxSeverity=Math.max(...available.map(r=>r.severity));
-    const affected=available.filter(r=>r.severity>=2).length;
-    const missing=rows.length-available.length;
-    const maxRain24=Math.max(...available.map(r=>Number(r.rain24)||0));
-    const maxRain48=Math.max(...available.map(r=>Number(r.rain48)||0));
-    const maxGust=Math.max(...available.map(r=>Number(r.gust48)||0));
-    const states={1:['✅','NORMAL'],2:['🟡','PRECAUCIÓN'],3:['🔴','ALERTA'],4:['🟣','CRÍTICO']};
-    const [icon,state]=states[maxSeverity]||states[1];
-    const affectedText=affected?` · ${affected} sector${affected===1?'':'es'} afectado${affected===1?'':'s'}`:' · sin novedades';
-    const missingText=missing?` · ${missing} sin datos`:'';
-    msg+=`${icon} *Ramal ${ramal}: ${state}*${affectedText} · Lluvia máx. ${reportRound(maxRain24)}/${reportRound(maxRain48)} mm · Ráfagas ${reportRound(maxGust,0)} km/h${missingText}.\n`;
+function communityForecastData(){
+  const dateParts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Salta',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+  const isoToday=`${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+  const dates=Array.from({length:7},(_,i)=>{
+    const d=new Date(`${isoToday}T12:00:00-03:00`);
+    d.setDate(d.getDate()+i);
+    return d.toISOString().slice(0,10);
   });
-  const obs=document.getElementById('report-observations').value.trim();
-  if(obs) msg+=`\n📝 *Observaciones:* ${obs}\n`;
-  msg+='\n_Verificar alertas oficiales del SMN._';
+  return dates.map(date=>{
+    const values=[];
+    SECTORS.forEach(sector=>{
+      const daily=weatherData[sector.id]?.daily;
+      const index=daily?.time?.indexOf(date)??-1;
+      if(index<0)return;
+      const max=Number(daily.tempMax?.[index]);
+      const rain=Number(daily.rain?.[index]||0);
+      const probability=Number(daily.rainProbability?.[index]||0);
+      const gust=Number(daily.gustMax?.[index]||0);
+      if(Number.isFinite(max))values.push({sector,max,rain,probability,gust});
+    });
+    if(!values.length)return {date,missing:true};
+    const hottest=values.reduce((a,b)=>b.max>a.max?b:a);
+    const rain=Math.max(...values.map(v=>v.rain));
+    const probability=Math.max(...values.map(v=>v.probability));
+    const gust=Math.max(...values.map(v=>v.gust));
+    return {date,missing:false,max:hottest.max,locality:hottest.sector.name,rain,probability,gust,available:values.length,condition:communityForecastCondition(rain,probability)};
+  });
+}
 
-  // WhatsApp no permite publicar automáticamente en una comunidad desde una URL.
-  // Copiamos el reporte y abrimos la comunidad privada para que el usuario lo pegue y comparta.
-  const helper=document.createElement('textarea');
-  helper.value=msg;
-  helper.setAttribute('readonly','');
-  helper.style.position='fixed';
-  helper.style.opacity='0';
-  document.body.appendChild(helper);
-  helper.select();
-  helper.setSelectionRange(0,helper.value.length);
-  const copied=document.execCommand('copy');
-  document.body.removeChild(helper);
+function roundRectPath(ctx,x,y,w,h,r){
+  const radius=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+radius,y);
+  ctx.arcTo(x+w,y,x+w,y+h,radius);
+  ctx.arcTo(x+w,y+h,x,y+h,radius);
+  ctx.arcTo(x,y+h,x,y,radius);
+  ctx.arcTo(x,y,x+w,y,radius);
+  ctx.closePath();
+}
 
+function buildCommunityForecastCanvas(){
+  const forecast=communityForecastData();
+  const canvas=document.createElement('canvas');
+  canvas.width=1080;
+  canvas.height=1350;
+  const ctx=canvas.getContext('2d');
+  const gradient=ctx.createLinearGradient(0,0,1080,1350);
+  gradient.addColorStop(0,'#07172D');
+  gradient.addColorStop(1,'#0B2443');
+  ctx.fillStyle=gradient;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle='#F5C842';
+  ctx.fillRect(0,0,canvas.width,18);
+  ctx.textAlign='left';
+  ctx.fillStyle='#FFFFFF';
+  ctx.font='700 54px Arial, sans-serif';
+  ctx.fillText('SITE VISIÓN · UP SALTA',70,94);
+  ctx.fillStyle='#F5C842';
+  ctx.font='700 30px Arial, sans-serif';
+  ctx.fillText('PRONÓSTICO METEOROLÓGICO · 7 DÍAS',70,145);
+  ctx.fillStyle='#9FB3CC';
+  ctx.font='24px Arial, sans-serif';
+  ctx.fillText(`Actualizado: ${argentinaDateTime()}`,70,188);
+
+  const dayFormatter=new Intl.DateTimeFormat('es-AR',{timeZone:'UTC',weekday:'short',day:'2-digit',month:'2-digit'});
+  forecast.forEach((day,index)=>{
+    const x=55,y=225+index*142,w=970,h=122;
+    roundRectPath(ctx,x,y,w,h,22);
+    ctx.fillStyle=index%2===0?'#132B49':'#102640';
+    ctx.fill();
+    ctx.strokeStyle='#2A496B';
+    ctx.lineWidth=2;
+    ctx.stroke();
+
+    const date=new Date(`${day.date}T12:00:00Z`);
+    const dateText=dayFormatter.format(date).replace('.', '').toUpperCase();
+    ctx.fillStyle='#FFFFFF';
+    ctx.font='700 30px Arial, sans-serif';
+    ctx.fillText(index===0?`HOY · ${dateText}`:dateText,82,y+49);
+
+    if(day.missing){
+      ctx.fillStyle='#94A3B8';
+      ctx.font='26px Arial, sans-serif';
+      ctx.fillText('⚪  Sin datos disponibles',82,y+91);
+      return;
+    }
+
+    ctx.fillStyle=day.condition.color;
+    ctx.font='38px Arial, sans-serif';
+    ctx.fillText(day.condition.emoji,355,y+73);
+    ctx.fillStyle='#DCE8F5';
+    ctx.font='700 26px Arial, sans-serif';
+    ctx.fillText(day.condition.label,420,y+49);
+    ctx.fillStyle='#9FB3CC';
+    ctx.font='22px Arial, sans-serif';
+    ctx.fillText(`Lluvia máx. ${reportRound(day.rain)} mm · ${reportRound(day.probability,0)}%`,420,y+87);
+
+    ctx.textAlign='right';
+    ctx.fillStyle='#F5C842';
+    ctx.font='700 42px Arial, sans-serif';
+    ctx.fillText(`${reportRound(day.max)} °C`,995,y+53);
+    ctx.fillStyle='#AFC2D8';
+    ctx.font='20px Arial, sans-serif';
+    ctx.fillText(`Máx. regional · ${day.locality}`,995,y+88);
+    ctx.textAlign='left';
+  });
+
+  roundRectPath(ctx,55,1230,970,72,18);
+  ctx.fillStyle='#081A31';
+  ctx.fill();
+  ctx.textAlign='center';
+  ctx.fillStyle='#D9E5F2';
+  ctx.font='22px Arial, sans-serif';
+  ctx.fillText('Fuente: Open-Meteo · Verificar alertas oficiales del SMN',540,1276);
+  ctx.fillStyle='#F5C842';
+  ctx.font='700 20px Arial, sans-serif';
+  ctx.fillText('upsaltavision.com.ar',540,1322);
+  return canvas;
+}
+
+async function sendReportWhatsApp(){
+  if(!window._lastReportRows){ toast('Generá el reporte primero','err'); return; }
+  const canvas=buildCommunityForecastCanvas();
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png',0.95));
+  if(!blob){toast('No se pudo crear la tarjeta','err');return;}
+  const filename=`Pronostico_Site_Vision_7_dias_${todayStr()}.png`;
+  const file=new File([blob],filename,{type:'image/png'});
+  const shareData={
+    title:'Site Visión · Pronóstico de 7 días',
+    text:'Pronóstico meteorológico de 7 días · UP Salta',
+    files:[file]
+  };
+
+  if(navigator.share && navigator.canShare?.({files:[file]})){
+    try{
+      await navigator.share(shareData);
+      addLog('Tarjeta meteorológica de 7 días compartida');
+      toast('✅ Tarjeta preparada para compartir','ok');
+      return;
+    }catch(error){
+      if(error?.name==='AbortError')return;
+    }
+  }
+
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;
+  link.download=filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
   window.open(COMMUNITY_URL,'_blank','noopener,noreferrer');
-  addLog('Reporte preparado para compartir en la Comunidad privada de Clima Alert');
-  toast(copied?'📋 Resumen por ramal copiado. Pegalo y compartilo en la Comunidad.':'Comunidad abierta. Copiá el resumen por ramal para compartirlo.','ok');
+  addLog('Tarjeta meteorológica descargada para compartir en la Comunidad');
+  toast('🖼️ Tarjeta descargada. Adjuntala en la Comunidad.','ok');
 }
 
 // ── ACTUALIZACIÓN DEL REPORTE MIENTRAS EL PANEL ESTÁ ABIERTO ──
