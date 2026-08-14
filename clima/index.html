@@ -874,18 +874,14 @@ body.modal-open{overflow:hidden;}
   <div style="overflow-x:auto;">
     <table id="report-table" style="width:100%;border-collapse:collapse;">
       <thead>
-        <tr>
+        <tr id="report-head-row">
           <th class="rth rth-loc">Localidad</th>
           <th class="rth rth-ram">Ramal</th>
-          <th class="rth">Mín. / Máx.<br><span style="font-weight:400;font-size:10px;">próx. 24 h</span></th>
-          <th class="rth">Lluvia<br><span style="font-weight:400;font-size:10px;">24 h / 48 h</span></th>
-          <th class="rth">Ráfaga máx.<br><span style="font-weight:400;font-size:10px;">próx. 48 h</span></th>
-          <th class="rth">Evento principal</th>
-          <th class="rth rth-alerta">Estado</th>
+          <th class="rth" colspan="7">Temperaturas máximas · próximos 7 días</th>
         </tr>
       </thead>
       <tbody id="report-tbody">
-        <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink3);">Presioná "Generar Ahora" para cargar el reporte</td></tr>
+        <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--ink3);">Presioná "Generar Ahora" para cargar el reporte</td></tr>
       </tbody>
     </table>
   </div>
@@ -2604,12 +2600,24 @@ function todayStr(){
 function initReportDates(){ /* Se conserva por compatibilidad con versiones anteriores. */ }
 function reportRound(value, decimals=1){ return Number.isFinite(Number(value)) ? Number(value).toFixed(decimals) : '—'; }
 
+function reportForecastDates(){
+  const parts=Object.fromEntries(new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Salta',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+  const isoToday=`${parts.year}-${parts.month}-${parts.day}`;
+  return Array.from({length:7},(_,i)=>{const d=new Date(`${isoToday}T12:00:00-03:00`);d.setDate(d.getDate()+i);return d.toISOString().slice(0,10);});
+}
+function reportDateLabel(date){
+  const [year,month,day]=date.split('-');
+  return `${day}/${month}`;
+}
+
 function buildDailyReportRow(sector){
   const cur = weatherData[sector.id];
   const info = SECTOR_INFO[sector.id] || {provincia:'—',ramal:'—'};
-  if(!cur?.daily?.time?.length) return {sector,info,missing:true,severity:0,state:'Sin datos',stateClass:'',event:'Datos no disponibles'};
+  const forecastDates=reportForecastDates();
+  if(!cur?.daily?.time?.length) return {sector,info,missing:true,max7:forecastDates.map(()=>null),severity:0,state:'Sin datos',stateClass:'',event:'Datos no disponibles'};
   const t = getThr(sector.id);
   const d = cur.daily;
+  const max7=forecastDates.map(date=>{const index=d.time.indexOf(date);const value=index>=0?Number(d.tempMax[index]):NaN;return Number.isFinite(value)?value:null;});
   const todayIndex=Math.max(0,d.time.indexOf((cur.observedAt||'').slice(0,10)));
   const nextIndex=Math.min(todayIndex+1,d.time.length-1);
   const min24 = Number(d.tempMin[todayIndex]);
@@ -2630,22 +2638,24 @@ function buildDailyReportRow(sector){
   impacts.sort((a,b)=>b.score-a.score);
   const severity=impacts[0]?.score||1;
   const states={1:['Normal','alerta-bajo'],2:['Precaución','alerta-moderado'],3:['Alerta','alerta-alto'],4:['Crítico','alerta-ascendente']};
-  return {sector,info,missing:false,min24,max24,rain24,rain48,gust48,probability,severity,state:states[severity][0],stateClass:states[severity][1],event:impacts[0]?.text||'Sin eventos relevantes'};
+  return {sector,info,missing:false,max7,min24,max24,rain24,rain48,gust48,probability,severity,state:states[severity][0],stateClass:states[severity][1],event:impacts[0]?.text||'Sin eventos relevantes'};
 }
 
 // ── GENERATE REPORT ──
 function generateReport(){
   const tbody = document.getElementById('report-tbody');
+  const dates=reportForecastDates();
+  const head=document.getElementById('report-head-row');
+  if(head) head.innerHTML=`
+    <th class="rth rth-loc">Localidad</th>
+    <th class="rth rth-ram">Ramal</th>
+    ${dates.map(date=>`<th class="rth">${reportDateLabel(date)}<br><span style="font-weight:400;font-size:10px;">Máx. °C</span></th>`).join('')}`;
   const rows = SECTORS.map(buildDailyReportRow).sort((a,b)=>b.severity-a.severity || a.sector.name.localeCompare(b.sector.name));
   tbody.innerHTML = rows.map(r=>`
     <tr>
       <td class="rtd rtd-loc">${r.sector.name}</td>
       <td class="rtd"><b>${r.info.ramal}</b></td>
-      <td class="rtd rtd-num">${r.missing?'—':`${reportRound(r.min24)}° / ${reportRound(r.max24)}°`}</td>
-      <td class="rtd rtd-num">${r.missing?'—':`${reportRound(r.rain24)} / ${reportRound(r.rain48)} mm`}</td>
-      <td class="rtd rtd-num">${r.missing?'—':`${reportRound(r.gust48,0)} km/h`}</td>
-      <td class="rtd">${r.event}</td>
-      <td class="rtd ${r.stateClass}">${r.state}</td>
+      ${r.max7.map(value=>`<td class="rtd rtd-num">${Number.isFinite(value)?`${reportRound(value)} °C`:'—'}</td>`).join('')}
     </tr>
   `).join('');
   const normal=rows.filter(r=>r.severity===1).length;
@@ -2661,9 +2671,9 @@ function generateReport(){
   document.getElementById('report-missing').textContent=missing;
   document.getElementById('report-priority').innerHTML=worst&&worst.severity>1?`<b>Evento prioritario — ${worst.sector.name} (${worst.info.ramal}):</b> ${worst.event}. Revisar condiciones antes de disponer tareas en el sector.`:'<b>Sin eventos meteorológicos relevantes:</b> mantener monitoreo preventivo y verificar alertas oficiales del SMN.';
   const now = argentinaDateTime();
-  document.getElementById('report-lastgen').textContent = `Emitido: ${now} · Período analizado: próximas 48 horas · ${SECTORS.length-missing} de ${SECTORS.length} sectores con datos`;
-  addLog(`Reporte meteorológico diario generado (${SECTORS.length-missing}/${SECTORS.length} sectores)`);
-  toast('📈 Reporte diario generado','ok');
+  document.getElementById('report-lastgen').textContent = `Emitido: ${now} · Período mostrado: próximos 7 días · ${SECTORS.length-missing} de ${SECTORS.length} sectores con datos`;
+  addLog(`Reporte meteorológico de máximas generado (${SECTORS.length-missing}/${SECTORS.length} sectores)`);
+  toast('🌡️ Previsión de máximas generada','ok');
   window._lastReportRows = rows;
   window._lastReportMeta = {now,general,normal,caution,alerts,missing,worst};
 }
@@ -2697,23 +2707,31 @@ function exportReportExcel(){
   const meta=window._lastReportMeta;
   const obs=document.getElementById('report-observations').value.trim();
 
-  // Hoja 1 · Reporte diario completo
+  // Hoja 1 · Temperaturas máximas previstas por 7 días
   const report=XLSX.utils.aoa_to_sheet([]);
-  merge(report,'A1:K2'); put(report,'A1','CLIMA ALERT · REPORTE METEOROLÓGICO DIARIO',titleStyle);
-  merge(report,'A3:K3'); put(report,'A3','Unidad de Producción Salta · Belgrano Cargas y Logística S.A.',sectionStyle);
-  merge(report,'A5:B5'); merge(report,'C5:D5'); merge(report,'E5:F5'); merge(report,'G5:H5'); merge(report,'I5:J5');
-  put(report,'A5','Fecha de emisión',style(C.paleGray,C.ink,true));put(report,'C5',meta.now,style(C.paleGray,C.ink));
-  put(report,'E5','Período analizado',style(C.paleGray,C.ink,true));put(report,'G5','Próximas 48 horas',style(C.paleGray,C.ink));
-  put(report,'I5','Sectores monitoreados',style(C.paleGray,C.ink,true));put(report,'K5',SECTORS.length,style(C.paleGray,C.ink,true,'center'));
-  const cards=[['ESTADO GENERAL',meta.general],['NORMAL',meta.normal],['PRECAUCIÓN',meta.caution],['ALERTA / CRÍTICO',meta.alerts],['SIN DATOS',meta.missing]];
-  const cardCols=[0,2,4,6,8];
-  cards.forEach((card,i)=>{const c=cardCols[i],a=XLSX.utils.encode_col(c),b=XLSX.utils.encode_col(i===4?10:c+1);merge(report,`${a}7:${b}7`);merge(report,`${a}8:${b}9`);put(report,`${a}7`,card[0],i===0?headerStyle:i===1?style('16794B',C.white,true,'center'):i===2?style('B7791F',C.white,true,'center'):i===3?style('B42318',C.white,true,'center'):style(C.muted,C.white,true,'center'));put(report,`${a}8`,card[1],i===1?style(C.green,'11613D',true,'center'):i===2?style(C.amber,'8A5B0A',true,'center'):i===3?style(C.red,'8F1D18',true,'center'):style(C.paleBlue,C.navy,true,'center'));});
-  merge(report,'A10:K10'); put(report,'A10',meta.worst&&meta.worst.severity>1?`Evento prioritario — ${meta.worst.sector.name} (${meta.worst.info.ramal}): ${meta.worst.event}. Revisar condiciones antes de disponer tareas en el sector.`:'Sin eventos meteorológicos relevantes · Mantener monitoreo preventivo y verificar alertas oficiales del SMN.',style('FFF7D6','7A4E00',true,'left',true));
-  const reportHeaders=['Localidad','Provincia','Ramal','Mínima 24 h (°C)','Máxima 24 h (°C)','Lluvia 24 h (mm)','Lluvia 48 h (mm)','Ráfaga máx. 48 h (km/h)','Prob. precip. máx. (%)','Evento principal','Estado'];
-  setRange(report,11,[reportHeaders],reportHeaders.map(()=>headerStyle));
-  rows.forEach((r,i)=>{const rr=12+i;const vals=[r.sector.name,r.info.provincia,r.info.ramal,r.missing?'':r.min24,r.missing?'':r.max24,r.missing?'':r.rain24,r.missing?'':r.rain48,r.missing?'':r.gust48,r.missing?'':r.probability,r.event,r.state];const sts=[style(C.white),style(C.white),style(C.white,C.ink,true),...Array(6).fill(style(C.paleBlue,C.blue,false,'center')),style(C.paleGray,C.ink,false,'left',true),stateStyle(r.state)];setRange(report,rr,[vals],sts);});
-  const obsRow=12+rows.length+1; merge(report,`A${obsRow}:K${obsRow}`);put(report,`A${obsRow}`,'OBSERVACIONES OPERATIVAS',sectionStyle);merge(report,`A${obsRow+1}:K${obsRow+3}`);put(report,`A${obsRow+1}`,obs||'Sin observaciones adicionales.',style(C.paleBlue,C.ink,false,'left',true));merge(report,`A${obsRow+5}:K${obsRow+5}`);put(report,`A${obsRow+5}`,'Fuente: Open-Meteo · Pronóstico modelado por coordenada. Verificar alertas oficiales del SMN. Comunidad privada: https://chat.whatsapp.com/GFKC9dXeKAfKVQAL9r8P26',style(C.white,C.muted,false,'left',true));
-  finish(report,`A1:K${obsRow+5}`,[24,12,13,15,15,15,15,20,21,36,14],[{hpt:27},{hpt:27},{hpt:20},null,null,null,{hpt:23},{hpt:28},{hpt:28},{hpt:34},{hpt:38}]);
+  merge(report,'A1:I2');put(report,'A1','TEMPERATURAS MÁXIMAS · PRÓXIMOS 7 DÍAS',titleStyle);
+  merge(report,'A3:I3');put(report,'A3','Primera mirada operativa por localidad · valores máximos diarios previstos.',sectionStyle);
+  merge(report,'A5:I5');put(report,'A5',`Emitido: ${meta.now} · Fuente: Open-Meteo · Verificar alertas oficiales del SMN.`,style(C.paleGray,C.ink,false,'left',true));
+  const tempDates=reportForecastDates();
+  const tempHeaders=['Localidad','Ramal',...tempDates.map(date=>`${reportDateLabel(date)} · Máx. (°C)`)];
+  setRange(report,7,[tempHeaders],tempHeaders.map(()=>headerStyle));
+  const maxTempStyle=(value,hot)=>{
+    if(!Number.isFinite(value))return style(C.paleGray,C.muted,false,'center');
+    if(value>=hot+3)return style(C.purple,'6B21A8',true,'center');
+    if(value>=hot)return style(C.red,'8F1D18',true,'center');
+    if(value>=hot-2)return style(C.amber,'8A5B0A',true,'center');
+    return style(C.paleBlue,C.blue,true,'center');
+  };
+  rows.forEach((r,i)=>{
+    const hot=getThr(r.sector.id).hot;
+    const maxima=r.max7.map(value=>Number.isFinite(value)?Number(value.toFixed(1)):'');
+    const values=[r.sector.name,r.info.ramal||'',...maxima];
+    const styles=[style(C.white),style(C.paleBlue,C.blue,true,'center'),...r.max7.map(value=>maxTempStyle(value,hot))];
+    setRange(report,8+i,[values],styles);
+  });
+  const noteRow=9+rows.length;
+  merge(report,`A${noteRow}:I${noteRow}`);put(report,`A${noteRow}`,'Escala por umbral local: celeste = normal; amarillo = próximo al umbral; rojo = alerta; violeta = crítico.',style('FFF7D6','7A4E00',false,'left',true));
+  finish(report,`A1:I${noteRow}`,[27,18,16,16,16,16,16,16,16],[{hpt:27},{hpt:27},{hpt:20},null,{hpt:34},null,{hpt:38}]);
   XLSX.utils.book_append_sheet(wb,report,'Reporte diario');
 
   // Hoja 2 · Umbrales operativos utilizados por el Dashboard
@@ -2744,7 +2762,7 @@ function exportReportExcel(){
 
   // Hoja 4 · Guía y fuentes
   const guide=XLSX.utils.aoa_to_sheet([]);merge(guide,'A1:C2');put(guide,'A1','GUÍA DE USO · REPORTE METEOROLÓGICO',titleStyle);setRange(guide,4,[['Paso','Sección','Indicaciones']],Array(3).fill(headerStyle));
-  const guideRows=[['1','Reporte diario','Resume condiciones, evento principal y estado de los 23 sectores.'],['2','Clasificación','Los estados responden a los umbrales vigentes por localidad.'],['3','Umbrales','La hoja documenta los parámetros usados por Clima Alert al generar el informe.'],['4','Observaciones','Incluye las novedades o medidas preventivas cargadas antes de exportar.'],['5','Precipitación 7 días','Muestra milímetros diarios, color por rango y total previsto por localidad.'],['6','Validación oficial','Confirmar decisiones operativas con las alertas oficiales del SMN.']];guideRows.forEach((r,i)=>setRange(guide,5+i,[r],[style(C.white,C.ink,true,'center'),style(C.paleBlue,C.blue,true),style(C.white,C.ink,false,'left',true)]));merge(guide,'A12:C12');put(guide,'A12','Comunidad privada de Clima Alert',style('16794B',C.white,true));merge(guide,'A13:C13');put(guide,'A13','https://chat.whatsapp.com/GFKC9dXeKAfKVQAL9r8P26',style(C.green,'11613D',true));merge(guide,'A15:C15');put(guide,'A15','Fuentes oficiales y de apoyo',sectionStyle);setRange(guide,16,[['SMN','Alertas oficiales','https://www.smn.gob.ar/alertas'],['Open-Meteo','Datos modelados y pronóstico','https://open-meteo.com/']],[style(C.white,C.ink,true),style(C.paleBlue,C.blue,true),style(C.white,C.ink)]);merge(guide,'A19:C19');put(guide,'A19','Modelo definitivo · 4 hojas · previsión completa de 7 días',style(C.navy,C.yellow,true,'center'));finish(guide,'A1:C19',[14,25,80],[{hpt:27},{hpt:27},null,{hpt:28},...Array(6).fill({hpt:36})]);XLSX.utils.book_append_sheet(wb,guide,'Guía');
+  const guideRows=[['1','Reporte diario','Muestra 7 fechas por columna y únicamente las temperaturas máximas previstas por localidad.'],['2','Clasificación','Los estados responden a los umbrales vigentes por localidad.'],['3','Umbrales','La hoja documenta los parámetros usados por Clima Alert al generar el informe.'],['4','Observaciones','Incluye las novedades o medidas preventivas cargadas antes de exportar.'],['5','Precipitación 7 días','Muestra milímetros diarios, color por rango y total previsto por localidad.'],['6','Validación oficial','Confirmar decisiones operativas con las alertas oficiales del SMN.']];guideRows.forEach((r,i)=>setRange(guide,5+i,[r],[style(C.white,C.ink,true,'center'),style(C.paleBlue,C.blue,true),style(C.white,C.ink,false,'left',true)]));merge(guide,'A12:C12');put(guide,'A12','Comunidad privada de Clima Alert',style('16794B',C.white,true));merge(guide,'A13:C13');put(guide,'A13','https://chat.whatsapp.com/GFKC9dXeKAfKVQAL9r8P26',style(C.green,'11613D',true));merge(guide,'A15:C15');put(guide,'A15','Fuentes oficiales y de apoyo',sectionStyle);setRange(guide,16,[['SMN','Alertas oficiales','https://www.smn.gob.ar/alertas'],['Open-Meteo','Datos modelados y pronóstico','https://open-meteo.com/']],[style(C.white,C.ink,true),style(C.paleBlue,C.blue,true),style(C.white,C.ink)]);merge(guide,'A19:C19');put(guide,'A19','Modelo definitivo · 4 hojas · previsión completa de 7 días',style(C.navy,C.yellow,true,'center'));finish(guide,'A1:C19',[14,25,80],[{hpt:27},{hpt:27},null,{hpt:28},...Array(6).fill({hpt:36})]);XLSX.utils.book_append_sheet(wb,guide,'Guía');
 
   XLSX.writeFile(wb,`Reporte_Meteorologico_Clima_Alert_UP_Salta_7_dias_${todayStr()}.xlsx`,{bookType:'xlsx',cellStyles:true,compression:true});
   addLog('Reporte meteorológico completo exportado a Excel con previsión de 7 días');
