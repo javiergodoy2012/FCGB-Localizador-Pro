@@ -859,7 +859,7 @@ body.modal-open{overflow:hidden;}
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-ghost btn-sm" onclick="generateReport()">🔄 Generar Ahora</button>
       <button class="btn btn-ghost btn-sm" onclick="exportReportExcel()">📊 Excel completo · 7 días</button>
-      <button class="btn btn-primary btn-sm" onclick="sendReportWhatsApp()">🖼️ Crear tarjeta 7 días</button>
+      <button class="btn btn-primary btn-sm" onclick="sendReportWhatsApp()">🖼️ Crear matriz 23 localidades</button>
     </div>
   </div>
   <div class="report-summary" id="report-summary">
@@ -2769,170 +2769,140 @@ function exportReportExcel(){
   toast('📊 Excel completo descargado correctamente','ok');
 }
 
-// ── TARJETA DE PRONÓSTICO PARA LA COMUNIDAD ──
+// ── MATRIZ VISUAL DE 23 LOCALIDADES PARA LA COMUNIDAD ──
 function communityForecastCondition(rain, probability){
-  if(rain>=10 || probability>=70) return {emoji:'🌧️',label:'Lluvias',color:'#38BDF8'};
-  if(rain>=1 || probability>=45) return {emoji:'🌦️',label:'Inestable',color:'#60A5FA'};
-  if(probability>=25) return {emoji:'☁️',label:'Nublado',color:'#94A3B8'};
-  return {emoji:'☀️',label:'Despejado',color:'#FBBF24'};
+  if(rain>=10 || probability>=70)return {emoji:'🌧️',label:'Lluvias'};
+  if(rain>=1 || probability>=45)return {emoji:'🌦️',label:'Inestable'};
+  if(probability>=25)return {emoji:'☁️',label:'Nublado'};
+  return {emoji:'☀️',label:'Despejado'};
 }
 
-function communityForecastData(){
-  const dateParts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Salta',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
-  const isoToday=`${dateParts.year}-${dateParts.month}-${dateParts.day}`;
-  const dates=Array.from({length:7},(_,i)=>{
-    const d=new Date(`${isoToday}T12:00:00-03:00`);
-    d.setDate(d.getDate()+i);
-    return d.toISOString().slice(0,10);
+function communityRainColor(rain){
+  if(!Number.isFinite(rain))return '#24364D';
+  if(rain<=14)return '#17304D';
+  if(rain<=24)return '#166534';
+  if(rain<=35)return '#A16207';
+  return '#991B1B';
+}
+
+function communityForecastDates(){
+  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Salta',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+  const today=`${parts.year}-${parts.month}-${parts.day}`;
+  return Array.from({length:7},(_,i)=>{
+    const date=new Date(`${today}T12:00:00-03:00`);
+    date.setDate(date.getDate()+i);
+    return date.toISOString().slice(0,10);
   });
-  return dates.map(date=>{
-    const values=[];
-    SECTORS.forEach(sector=>{
-      const daily=weatherData[sector.id]?.daily;
+}
+
+function communityForecastRows(dates){
+  const ramalOrder=['C','C / C12','C13','C14','C / C15','C15','C18'];
+  return SECTORS.map((sector,order)=>{
+    const info=SECTOR_INFO[sector.id]||{ramal:'—'};
+    const daily=weatherData[sector.id]?.daily;
+    const days=dates.map(date=>{
       const index=daily?.time?.indexOf(date)??-1;
-      if(index<0)return;
+      if(index<0)return {missing:true};
       const max=Number(daily.tempMax?.[index]);
       const rain=Number(daily.rain?.[index]||0);
       const probability=Number(daily.rainProbability?.[index]||0);
-      const gust=Number(daily.gustMax?.[index]||0);
-      if(Number.isFinite(max))values.push({sector,max,rain,probability,gust});
+      if(!Number.isFinite(max))return {missing:true};
+      return {missing:false,max,rain,probability,condition:communityForecastCondition(rain,probability)};
     });
-    if(!values.length)return {date,missing:true};
-    const hottest=values.reduce((a,b)=>b.max>a.max?b:a);
-    const rain=Math.max(...values.map(v=>v.rain));
-    const probability=Math.max(...values.map(v=>v.probability));
-    const gust=Math.max(...values.map(v=>v.gust));
-    return {date,missing:false,max:hottest.max,locality:hottest.sector.name,rain,probability,gust,available:values.length,condition:communityForecastCondition(rain,probability)};
+    return {sector,ramal:info.ramal||'—',days,order};
+  }).sort((a,b)=>{
+    const ai=ramalOrder.indexOf(a.ramal),bi=ramalOrder.indexOf(b.ramal);
+    return (ai<0?999:ai)-(bi<0?999:bi)||a.order-b.order;
   });
 }
 
 function roundRectPath(ctx,x,y,w,h,r){
   const radius=Math.min(r,w/2,h/2);
-  ctx.beginPath();
-  ctx.moveTo(x+radius,y);
-  ctx.arcTo(x+w,y,x+w,y+h,radius);
-  ctx.arcTo(x+w,y+h,x,y+h,radius);
-  ctx.arcTo(x,y+h,x,y,radius);
-  ctx.arcTo(x,y,x+w,y,radius);
-  ctx.closePath();
+  ctx.beginPath();ctx.moveTo(x+radius,y);ctx.arcTo(x+w,y,x+w,y+h,radius);ctx.arcTo(x+w,y+h,x,y+h,radius);ctx.arcTo(x,y+h,x,y,radius);ctx.arcTo(x,y,x+w,y,radius);ctx.closePath();
+}
+
+function fitCanvasText(ctx,text,maxWidth,startSize,minSize=14,weight='700'){
+  let size=startSize;
+  do{ctx.font=`${weight} ${size}px Arial, sans-serif`;if(ctx.measureText(text).width<=maxWidth)return size;size-=1;}while(size>=minSize);
+  return minSize;
 }
 
 function buildCommunityForecastCanvas(){
-  const forecast=communityForecastData();
+  const dates=communityForecastDates();
+  const rows=communityForecastRows(dates);
   const canvas=document.createElement('canvas');
-  canvas.width=1080;
-  canvas.height=1350;
+  const W=2048,margin=36,ramalW=150,localityW=340,dateW=(W-margin*2-ramalW-localityW)/7;
+  const top=235,headerH=94,rowH=56,footerH=150;
+  const H=top+headerH+rows.length*rowH+footerH;
+  canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext('2d');
-  const gradient=ctx.createLinearGradient(0,0,1080,1350);
-  gradient.addColorStop(0,'#07172D');
-  gradient.addColorStop(1,'#0B2443');
-  ctx.fillStyle=gradient;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  const gradient=ctx.createLinearGradient(0,0,W,H);gradient.addColorStop(0,'#07172D');gradient.addColorStop(1,'#0B2443');ctx.fillStyle=gradient;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#F5C842';ctx.fillRect(0,0,W,16);
+  ctx.fillStyle='#FFFFFF';ctx.textAlign='left';ctx.font='700 54px Arial, sans-serif';ctx.fillText('SITE VISIÓN · UP SALTA',margin+20,82);
+  ctx.fillStyle='#F5C842';ctx.font='700 29px Arial, sans-serif';ctx.fillText('PRONÓSTICO OPERATIVO · 23 LOCALIDADES · 7 DÍAS',margin+20,132);
+  ctx.fillStyle='#AFC2D8';ctx.font='23px Arial, sans-serif';ctx.fillText(`Máximas y precipitación diaria · Actualizado: ${argentinaDateTime()}`,margin+20,176);
 
-  ctx.fillStyle='#F5C842';
-  ctx.fillRect(0,0,canvas.width,18);
-  ctx.textAlign='left';
-  ctx.fillStyle='#FFFFFF';
-  ctx.font='700 54px Arial, sans-serif';
-  ctx.fillText('SITE VISIÓN · UP SALTA',70,94);
-  ctx.fillStyle='#F5C842';
-  ctx.font='700 30px Arial, sans-serif';
-  ctx.fillText('PRONÓSTICO METEOROLÓGICO · 7 DÍAS',70,145);
-  ctx.fillStyle='#9FB3CC';
-  ctx.font='24px Arial, sans-serif';
-  ctx.fillText(`Actualizado: ${argentinaDateTime()}`,70,188);
-
-  const dayFormatter=new Intl.DateTimeFormat('es-AR',{timeZone:'UTC',weekday:'short',day:'2-digit',month:'2-digit'});
-  forecast.forEach((day,index)=>{
-    const x=55,y=225+index*142,w=970,h=122;
-    roundRectPath(ctx,x,y,w,h,22);
-    ctx.fillStyle=index%2===0?'#132B49':'#102640';
-    ctx.fill();
-    ctx.strokeStyle='#2A496B';
-    ctx.lineWidth=2;
-    ctx.stroke();
-
-    const date=new Date(`${day.date}T12:00:00Z`);
-    const dateText=dayFormatter.format(date).replace('.', '').toUpperCase();
-    ctx.fillStyle='#FFFFFF';
-    ctx.font='700 30px Arial, sans-serif';
-    ctx.fillText(index===0?`HOY · ${dateText}`:dateText,82,y+49);
-
-    if(day.missing){
-      ctx.fillStyle='#94A3B8';
-      ctx.font='26px Arial, sans-serif';
-      ctx.fillText('⚪  Sin datos disponibles',82,y+91);
-      return;
-    }
-
-    ctx.fillStyle=day.condition.color;
-    ctx.font='38px Arial, sans-serif';
-    ctx.fillText(day.condition.emoji,355,y+73);
-    ctx.fillStyle='#DCE8F5';
-    ctx.font='700 26px Arial, sans-serif';
-    ctx.fillText(day.condition.label,420,y+49);
-    ctx.fillStyle='#9FB3CC';
-    ctx.font='22px Arial, sans-serif';
-    ctx.fillText(`Lluvia máx. ${reportRound(day.rain)} mm · ${reportRound(day.probability,0)}%`,420,y+87);
-
-    ctx.textAlign='right';
-    ctx.fillStyle='#F5C842';
-    ctx.font='700 42px Arial, sans-serif';
-    ctx.fillText(`${reportRound(day.max)} °C`,995,y+53);
-    ctx.fillStyle='#AFC2D8';
-    ctx.font='20px Arial, sans-serif';
-    ctx.fillText(`Máx. regional · ${day.locality}`,995,y+88);
-    ctx.textAlign='left';
+  const tableX=margin,tableY=top;
+  ctx.fillStyle='#243B62';ctx.fillRect(tableX,tableY,ramalW+localityW,headerH);
+  ctx.fillStyle='#F5C842';ctx.textAlign='center';ctx.font='700 25px Arial, sans-serif';ctx.fillText('RAMAL',tableX+ramalW/2,tableY+56);ctx.fillText('LOCALIDAD',tableX+ramalW+localityW/2,tableY+56);
+  const fmt=new Intl.DateTimeFormat('es-AR',{timeZone:'UTC',weekday:'short',day:'2-digit',month:'2-digit'});
+  dates.forEach((date,i)=>{
+    const x=tableX+ramalW+localityW+i*dateW;
+    ctx.fillStyle='#0C1D33';ctx.fillRect(x,tableY,dateW,headerH);
+    const label=fmt.format(new Date(`${date}T12:00:00Z`)).replace('.','').toUpperCase().split(' ');
+    ctx.fillStyle='#FFFFFF';ctx.font='700 24px Arial, sans-serif';ctx.fillText(i===0?'HOY':label[0],x+dateW/2,tableY+38);
+    ctx.fillStyle='#F5C842';ctx.font='700 22px Arial, sans-serif';ctx.fillText(label.slice(1).join(' '),x+dateW/2,tableY+70);
   });
 
-  roundRectPath(ctx,55,1230,970,72,18);
-  ctx.fillStyle='#081A31';
-  ctx.fill();
-  ctx.textAlign='center';
-  ctx.fillStyle='#D9E5F2';
-  ctx.font='22px Arial, sans-serif';
-  ctx.fillText('Fuente: Open-Meteo · Verificar alertas oficiales del SMN',540,1276);
-  ctx.fillStyle='#F5C842';
-  ctx.font='700 20px Arial, sans-serif';
-  ctx.fillText('upsaltavision.com.ar',540,1322);
+  rows.forEach((row,rowIndex)=>{
+    const y=tableY+headerH+rowIndex*rowH;
+    ctx.fillStyle=rowIndex%2===0?'#112844':'#0E223B';ctx.fillRect(tableX+ramalW,y,localityW,rowH);
+    ctx.textAlign='left';ctx.fillStyle='#FFFFFF';fitCanvasText(ctx,row.sector.name,localityW-30,23,15,'700');ctx.fillText(row.sector.name,tableX+ramalW+15,y+36);
+    row.days.forEach((day,i)=>{
+      const x=tableX+ramalW+localityW+i*dateW;
+      ctx.fillStyle=day.missing?'#24364D':communityRainColor(day.rain);ctx.fillRect(x,y,dateW,rowH);
+      ctx.textAlign='center';
+      if(day.missing){ctx.fillStyle='#AFC2D8';ctx.font='21px Arial, sans-serif';ctx.fillText('⚪  —',x+dateW/2,y+35);return;}
+      ctx.fillStyle='#FFFFFF';ctx.font='700 21px Arial, sans-serif';ctx.fillText(`${day.condition.emoji}  ${reportRound(day.max)}°`,x+dateW/2,y+23);
+      ctx.fillStyle='#DCE8F5';ctx.font='18px Arial, sans-serif';ctx.fillText(`${reportRound(day.rain)} mm`,x+dateW/2,y+46);
+    });
+  });
+
+  let groupStart=0;
+  while(groupStart<rows.length){
+    let groupEnd=groupStart+1;
+    while(groupEnd<rows.length&&rows[groupEnd].ramal===rows[groupStart].ramal)groupEnd++;
+    const y=tableY+headerH+groupStart*rowH,h=(groupEnd-groupStart)*rowH;
+    ctx.fillStyle=groupStart%2===0?'#1D3A62':'#183354';ctx.fillRect(tableX,y,ramalW,h);
+    ctx.strokeStyle='#45678D';ctx.lineWidth=2;ctx.strokeRect(tableX,y,ramalW,h);
+    ctx.fillStyle='#F5C842';ctx.textAlign='center';ctx.font='700 28px Arial, sans-serif';ctx.fillText(rows[groupStart].ramal,tableX+ramalW/2,y+h/2+10);
+    groupStart=groupEnd;
+  }
+
+  ctx.strokeStyle='#456078';ctx.lineWidth=1;
+  const xLines=[tableX,tableX+ramalW,tableX+ramalW+localityW,...Array.from({length:8},(_,i)=>tableX+ramalW+localityW+i*dateW)];
+  xLines.forEach(x=>{ctx.beginPath();ctx.moveTo(x,tableY);ctx.lineTo(x,tableY+headerH+rows.length*rowH);ctx.stroke();});
+  for(let i=0;i<=rows.length;i++){const y=tableY+headerH+i*rowH;ctx.beginPath();ctx.moveTo(tableX+ramalW,y);ctx.lineTo(W-margin,y);ctx.stroke();}
+
+  const fy=tableY+headerH+rows.length*rowH+28;
+  ctx.textAlign='left';ctx.fillStyle='#DCE8F5';ctx.font='700 21px Arial, sans-serif';ctx.fillText('ESCALA DE PRECIPITACIÓN:',margin+10,fy+25);
+  const legend=[['0–14 mm','#17304D'],['15–24 mm','#166534'],['25–35 mm','#A16207'],['Más de 35 mm','#991B1B']];
+  legend.forEach((item,i)=>{const x=340+i*285;roundRectPath(ctx,x,fy,265,45,10);ctx.fillStyle=item[1];ctx.fill();ctx.fillStyle='#FFFFFF';ctx.textAlign='center';ctx.font='700 19px Arial, sans-serif';ctx.fillText(item[0],x+132,fy+29);});
+  ctx.textAlign='center';ctx.fillStyle='#AFC2D8';ctx.font='20px Arial, sans-serif';ctx.fillText('Fuente: Open-Meteo · Verificar alertas oficiales del SMN · upsaltavision.com.ar',W/2,fy+92);
   return canvas;
 }
 
 async function sendReportWhatsApp(){
-  if(!window._lastReportRows){ toast('Generá el reporte primero','err'); return; }
+  if(!window._lastReportRows){toast('Generá el reporte primero','err');return;}
   const canvas=buildCommunityForecastCanvas();
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png',0.95));
-  if(!blob){toast('No se pudo crear la tarjeta','err');return;}
-  const filename=`Pronostico_Site_Vision_7_dias_${todayStr()}.png`;
+  if(!blob){toast('No se pudo crear la matriz','err');return;}
+  const filename=`Pronostico_Site_Vision_23_localidades_${todayStr()}.png`;
   const file=new File([blob],filename,{type:'image/png'});
-  const shareData={
-    title:'Site Visión · Pronóstico de 7 días',
-    text:'Pronóstico meteorológico de 7 días · UP Salta',
-    files:[file]
-  };
-
-  if(navigator.share && navigator.canShare?.({files:[file]})){
-    try{
-      await navigator.share(shareData);
-      addLog('Tarjeta meteorológica de 7 días compartida');
-      toast('✅ Tarjeta preparada para compartir','ok');
-      return;
-    }catch(error){
-      if(error?.name==='AbortError')return;
-    }
+  if(navigator.share&&navigator.canShare?.({files:[file]})){
+    try{await navigator.share({title:'Site Visión · Pronóstico de 7 días',text:'Pronóstico de las 23 localidades de UP Salta',files:[file]});addLog('Matriz meteorológica compartida');toast('✅ Matriz preparada para compartir','ok');return;}catch(error){if(error?.name==='AbortError')return;}
   }
-
-  const url=URL.createObjectURL(blob);
-  const link=document.createElement('a');
-  link.href=url;
-  link.download=filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),30000);
-  window.open(COMMUNITY_URL,'_blank','noopener,noreferrer');
-  addLog('Tarjeta meteorológica descargada para compartir en la Comunidad');
-  toast('🖼️ Tarjeta descargada. Adjuntala en la Comunidad.','ok');
+  const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);window.open(COMMUNITY_URL,'_blank','noopener,noreferrer');addLog('Matriz meteorológica descargada para la Comunidad');toast('🖼️ Matriz descargada. Adjuntala en la Comunidad.','ok');
 }
 
 // ── ACTUALIZACIÓN DEL REPORTE MIENTRAS EL PANEL ESTÁ ABIERTO ──
