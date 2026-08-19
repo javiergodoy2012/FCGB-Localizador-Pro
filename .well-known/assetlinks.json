@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ar.com.upsaltavision.climaalert",
+      "sha256_cert_fingerprints": [
+        "CA:E7:21:65:9A:77:08:39:E6:83:FF:5A:81:ED:3F:DE:5B:19:82:62:51:96:C6:C9:3E:7B:BB:65:7D:E3:94:15"
+      ]
+    }
+  }
+]
