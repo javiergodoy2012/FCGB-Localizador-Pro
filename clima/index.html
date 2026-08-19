@@ -695,12 +695,12 @@ body.modal-open{overflow:hidden;}
     <div class="alarm-left">
       <span style="font-size:22px;">🔔</span>
       <div>
-        <div class="alarm-label" id="alarm-status-label">Alarma sonora: <span id="alarm-on-label" class="alarm-active">Activada</span></div>
+        <div class="alarm-label" id="alarm-status-label">Alarma sonora: <span id="alarm-on-label" style="color:var(--danger)">Desactivada</span></div>
         <div style="font-size:11px;color:var(--ink3);margin-top:2px;">Suena al detectar condiciones de alerta en cualquier sector</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;">
-      <label class="toggle"><input type="checkbox" id="alarm-toggle" checked onchange="toggleAlarm()"><span class="toggle-slider"></span></label>
+      <label class="toggle"><input type="checkbox" id="alarm-toggle" onchange="toggleAlarm()"><span class="toggle-slider"></span></label>
       <button class="btn btn-ghost btn-sm" onclick="testAlarm()">🔊 Probar sonido</button>
       <button class="btn btn-ghost btn-sm" onclick="stopAlarm()">🔇 Silenciar</button>
     </div>
@@ -2223,7 +2223,7 @@ function focusSector(sectorId){
 // ══════════════════════════════════════════════
 // ALARM — Web Audio API
 // ══════════════════════════════════════════════
-let alarmEnabled = true;
+let alarmEnabled = false;
 let alarmCtx = null;
 let alarmInterval = null;
 let alarmSounding = false;
