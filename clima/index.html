@@ -1,6 +1,16 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<script>
+// VISIONSITE_TWA_BOOTSTRAP: entrar por la TWA validada y continuar a VisionSite.
+(() => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('entrada') === 'visionsite') {
+    window.location.replace('/');
+  }
+})();
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Clima Alert TAC — UP Salta</title>
