@@ -843,6 +843,10 @@ body::after{
   @keyframes accessSpin{to{transform:rotate(360deg)}}
 </style>
 
+
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#07111f">
+
 </head>
 <body class="firebase-locked">
 
@@ -2249,6 +2253,17 @@ document.addEventListener('DOMContentLoaded', function(){
     }else{currentUser=null;clearDailyAccess();lock();view('signedOut');message('');}
   });
 })();
+</script>
+
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/site-vision-sw.js', {scope: '/'})
+      .catch(error => console.warn('Service Worker VisionSite:', error));
+  });
+}
 </script>
 
 </body>
