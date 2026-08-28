@@ -838,6 +838,12 @@ body::after{
   .access-btn:disabled{opacity:.55;cursor:wait}
   .access-status{min-height:20px;margin-top:13px;color:#9fc4e7;font-size:12px;line-height:1.45}
   .access-status.error{color:#ffaaaa}
+  .access-legal{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid #203a55;font-size:12px}
+.access-legal a{color:#a9cbee;text-decoration:none;font-weight:700}
+.access-legal a:hover{text-decoration:underline;color:#fff}
+.site-legal-links{position:fixed;right:12px;bottom:10px;z-index:9998;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.site-legal-links a{display:inline-flex;align-items:center;min-height:30px;padding:6px 10px;border:1px solid rgba(93,139,184,.52);border-radius:999px;background:rgba(5,20,38,.9);color:#b9d2e9;text-decoration:none;font-size:10px;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.site-legal-links a:hover{color:#fff;border-color:#6aa8e6}
   .access-badge{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:6px 10px;background:#5b3d06;color:#ffe39a;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
   .access-spinner{width:20px;height:20px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:accessSpin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
   @keyframes accessSpin{to{transform:rotate(360deg)}}
@@ -879,8 +885,17 @@ body::after{
     </div>
 
     <div class="access-status" id="accessStatus"></div>
-  </section>
+  <nav class="access-legal" aria-label="Privacidad y cuenta">
+    <a href="/privacidad/">Política de Privacidad</a>
+    <a href="/eliminar-cuenta/">Eliminar cuenta y datos</a>
+  </nav>
+</section>
 </div>
+
+<nav class="site-legal-links" aria-label="Privacidad y administración de cuenta">
+  <a href="/privacidad/">Privacidad</a>
+  <a href="/eliminar-cuenta/">Eliminar cuenta</a>
+</nav>
 
 <div class="app" id="dashboardApp">
 
