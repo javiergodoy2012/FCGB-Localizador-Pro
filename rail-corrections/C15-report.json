@@ -2,11 +2,14 @@
   "ramal": "C15",
   "sourcePoints": 33453,
   "anchors": 3347,
+  "rejectedAnchors": 0,
+  "fullReferenceDistance": 60,
+  "maxReferenceDistance": 100,
   "pkPreserved": true,
   "movementMeters": {
     "median": 6.029747546812845,
     "p95": 24.914859564518604,
-    "max": 65.71858930963288
+    "max": 60.03155160912484
   },
   "segmentMeters": {
     "originalMedian": 10.044493907137918,
