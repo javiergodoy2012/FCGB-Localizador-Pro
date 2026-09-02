@@ -45,18 +45,27 @@ const ramal = network[ramalId];
 if (!ramal) throw new Error(`No existe el ramal ${ramalId}.`);
 
 const samples = JSON.parse(fs.readFileSync(samplesPath, 'utf8'));
+const maxReferenceDistance = Number(process.env.MAX_REFERENCE_DISTANCE || 100);
 if (samples.length < 2) throw new Error(`No hay controles suficientes para ${ramalId}.`);
 for (let i = 1; i < samples.length; i += 1) {
   if (samples[i].pk <= samples[i - 1].pk) throw new Error('Los controles no están ordenados por PK.');
 }
 
-const anchors = samples.map(sample => ({
-  pk: sample.pk,
-  dLat: sample.lat - sample.originalLat,
-  dLon: sample.lon - sample.originalLon,
-  referenceDistance: sample.distance,
-  wayId: sample.wayId,
-}));
+const fullReferenceDistance = Math.min(60, maxReferenceDistance);
+const anchors = samples.map(sample => {
+  const referenceWeight = sample.distance <= fullReferenceDistance
+    ? 1
+    : Math.max(0, (maxReferenceDistance - sample.distance) / (maxReferenceDistance - fullReferenceDistance));
+  return {
+    pk: sample.pk,
+    dLat: (sample.lat - sample.originalLat) * referenceWeight,
+    dLon: (sample.lon - sample.originalLon) * referenceWeight,
+    referenceDistance: sample.distance,
+    referenceWeight,
+    wayId: sample.wayId,
+    trusted: referenceWeight > 0,
+  };
+});
 
 let anchorIndex = 0;
 const corrected = ramal.puntos.map(point => {
@@ -87,6 +96,9 @@ const report = {
   ramal: ramalId,
   sourcePoints: ramal.puntos.length,
   anchors: anchors.length,
+  rejectedAnchors: anchors.filter(anchor => !anchor.trusted).length,
+  fullReferenceDistance,
+  maxReferenceDistance,
   pkPreserved: corrected.every((point, index) => point[0] === ramal.puntos[index][0]),
   movementMeters: {
     median: quantile(movement, 0.5),
