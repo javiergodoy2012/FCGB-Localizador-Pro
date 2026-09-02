@@ -1,0 +1,34 @@
+{
+  "ramal": "C14",
+  "sourcePoints": 55394,
+  "anchors": 3884,
+  "rejectedAnchors": 98,
+  "fullReferenceDistance": 60,
+  "maxReferenceDistance": 100,
+  "pkPreserved": true,
+  "movementMeters": {
+    "median": 4.737142411423651,
+    "p95": 17.215840261881524,
+    "max": 278.25798983505103
+  },
+  "segmentMeters": {
+    "originalMedian": 9.985097430283336,
+    "correctedMedian": 9.984889252729275,
+    "correctedP99": 15.193931758352102,
+    "correctedMax": 59.12652655836377,
+    "existingDiscontinuities": 76,
+    "newDiscontinuities": 0
+  },
+  "endpoints": {
+    "start": [
+      1149.819,
+      -24.906658509883734,
+      -65.49214605700405
+    ],
+    "end": [
+      1703.736,
+      -24.448660303860162,
+      -68.29233622010872
+    ]
+  }
+}
