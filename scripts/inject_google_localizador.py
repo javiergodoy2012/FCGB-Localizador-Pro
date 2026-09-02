@@ -8,7 +8,7 @@ import sys
 SCRIPT_ANCHOR = '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>'
 SCRIPT_INJECTION = """<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/google-maps-config.js"></script>
-<script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.16.0/Leaflet.GoogleMutant.js"></script>"""
+<script src="/Leaflet.GoogleMutant.js"></script>"""
 
 MAP_ANCHOR = """const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
 const rail=L.tileLayer('https://tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png',{maxZoom:19,opacity:.45,attribution:'OpenRailwayMap'}).addTo(map);

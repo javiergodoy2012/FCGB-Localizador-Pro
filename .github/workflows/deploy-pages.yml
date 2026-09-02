@@ -33,6 +33,9 @@ jobs:
             mkdir -p "_site/$(dirname "$file")"
             cp "$file" "_site/$file"
           done < <(git ls-files -z)
+          curl --fail --location --silent --show-error \
+            https://cdn.jsdelivr.net/npm/leaflet.gridlayer.googlemutant@0.16.0/Leaflet.GoogleMutant.js \
+            --output _site/Leaflet.GoogleMutant.js
           python - <<'PY'
           import json
           import os
