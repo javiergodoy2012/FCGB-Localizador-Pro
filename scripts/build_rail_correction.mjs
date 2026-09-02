@@ -80,6 +80,8 @@ for (let i = 1; i < corrected.length; i += 1) {
   steps.push(haversine(corrected[i - 1][1], corrected[i - 1][2], corrected[i][1], corrected[i][2]));
   originalSteps.push(haversine(ramal.puntos[i - 1][1], ramal.puntos[i - 1][2], ramal.puntos[i][1], ramal.puntos[i][2]));
 }
+const existingDiscontinuities = originalSteps.filter(value => value > 25).length;
+const newDiscontinuities = steps.filter((value, index) => value > 25 && originalSteps[index] <= 25).length;
 
 const report = {
   ramal: ramalId,
@@ -96,7 +98,8 @@ const report = {
     correctedMedian: quantile([...steps].sort((a, b) => a - b), 0.5),
     correctedP99: quantile([...steps].sort((a, b) => a - b), 0.99),
     correctedMax: Math.max(...steps),
-    over25m: steps.filter(value => value > 25).length,
+    existingDiscontinuities,
+    newDiscontinuities,
   },
   endpoints: {
     start: corrected[0],
@@ -105,7 +108,9 @@ const report = {
 };
 
 if (!report.pkPreserved) throw new Error('La corrección alteró las progresivas PK.');
-if (report.segmentMeters.over25m) throw new Error(`La corrección produjo ${report.segmentMeters.over25m} saltos mayores a 25 m.`);
+if (report.segmentMeters.newDiscontinuities) {
+  throw new Error(`La corrección produjo ${report.segmentMeters.newDiscontinuities} saltos nuevos mayores a 25 m.`);
+}
 
 fs.mkdirSync(outputDir, {recursive: true});
 fs.writeFileSync(path.join(outputDir, `${ramalId}.json`), `${JSON.stringify({ramal: ramalId, anchors})}\n`);
