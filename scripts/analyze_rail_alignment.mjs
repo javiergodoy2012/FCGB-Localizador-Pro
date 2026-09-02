@@ -157,7 +157,8 @@ function nearestRail(point) {
   return best;
 }
 
-const sampleEvery = Math.max(1, Math.round(points.length / Math.max(700, (ramal.km_fin - ramal.km_inicio) * 2)));
+const targetSamples = Math.min(4000, Math.max(1000, Math.ceil((ramal.km_fin - ramal.km_inicio) * 10)));
+const sampleEvery = Math.max(1, Math.round(points.length / targetSamples));
 const samples = [];
 for (let i = 0; i < points.length; i += sampleEvery) {
   const point = points[i];
