@@ -13,7 +13,8 @@
     "correctedMedian": 10.04254868334777,
     "correctedP99": 10.624098557437913,
     "correctedMax": 11.129063989439292,
-    "over25m": 0
+    "existingDiscontinuities": 0,
+    "newDiscontinuities": 0
   },
   "endpoints": {
     "start": [
