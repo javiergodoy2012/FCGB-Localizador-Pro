@@ -39,6 +39,8 @@ jobs:
           from pathlib import Path
 
           key = os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
+          if not key:
+              raise SystemExit("Falta el secreto GOOGLE_MAPS_API_KEY; se conserva el despliegue anterior.")
           Path("_site/google-maps-config.js").write_text(
               "window.VISION_GOOGLE_MAPS_API_KEY = " + json.dumps(key) + ";\n",
               encoding="utf-8",
