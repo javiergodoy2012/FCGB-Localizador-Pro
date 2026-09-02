@@ -46,6 +46,7 @@ jobs:
               encoding="utf-8",
           )
           PY
+          python scripts/inject_google_localizador.py _site/index.html
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
