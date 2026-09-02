@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        ramal: [C15, C, C13, C14, C16, C18, C25]
+        ramal: [C25]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
