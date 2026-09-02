@@ -2103,9 +2103,9 @@ function initMap(){
 
   leafletMap = L.map('map-container', { zoomControl:true }).setView([-24.5, -65.5], 7);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap © CartoDB',
-    maxZoom: 18
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
   }).addTo(leafletMap);
 
   // Create markers for each sector
