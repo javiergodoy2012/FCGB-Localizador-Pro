@@ -2,7 +2,7 @@
 .app {
   isolation: isolate;
   background:
-    linear-gradient(90deg, rgba(6, 22, 41, .97) 0%, rgba(6, 22, 41, .90) 24%, rgba(6, 22, 41, .98) 48%, rgba(6, 22, 41, .90) 76%, rgba(6, 22, 41, .97) 100%),
+    linear-gradient(90deg, rgba(6, 22, 41, .82) 0%, rgba(6, 22, 41, .72) 24%, rgba(6, 22, 41, .94) 48%, rgba(6, 22, 41, .72) 76%, rgba(6, 22, 41, .82) 100%),
     url("clima/lateral-up-salta-izquierdo.webp") left center / 52% 100% no-repeat,
     url("clima/lateral-up-salta-derecho.webp") right center / 52% 100% no-repeat !important;
 }
@@ -10,11 +10,6 @@
 .app > * {
   position: relative;
   z-index: 1;
-}
-
-body::before,
-body::after {
-  display: none !important;
 }
 
 .topbar {
@@ -77,7 +72,7 @@ body::after {
 .sidebar,
 .metrics,
 .info-bar {
-  background: rgba(6, 22, 41, .94) !important;
+  background: rgba(6, 22, 41, .84) !important;
   backdrop-filter: blur(4px);
 }
 
