@@ -1,0 +1,36 @@
+name: Analizar alineación ferroviaria
+
+on:
+  push:
+    branches: [feature/alinear-trazas]
+    paths:
+      - index.html
+      - scripts/analyze_rail_alignment.mjs
+      - .github/workflows/analyze-rail-alignment.yml
+  workflow_dispatch:
+    inputs:
+      ramal:
+        description: Ramal a analizar
+        required: true
+        default: C15
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Consultar y medir la red ferroviaria
+        run: node scripts/analyze_rail_alignment.mjs "${{ inputs.ramal || 'C15' }}"
+
+      - name: Guardar resultados
+        uses: actions/upload-artifact@v4
+        with:
+          name: rail-alignment-${{ inputs.ramal || 'C15' }}
+          path: rail-analysis/
+          retention-days: 7
