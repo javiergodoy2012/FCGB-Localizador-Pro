@@ -1,0 +1,58 @@
+name: Deploy VisionSite to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Prepare static site
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          mkdir _site
+          while IFS= read -r -d '' file; do
+            mkdir -p "_site/$(dirname "$file")"
+            cp "$file" "_site/$file"
+          done < <(git ls-files -z)
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          key = os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
+          Path("_site/google-maps-config.js").write_text(
+              "window.VISION_GOOGLE_MAPS_API_KEY = " + json.dumps(key) + ";\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

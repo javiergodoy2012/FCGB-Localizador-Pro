@@ -431,6 +431,8 @@ tr:hover .rtd{ background:rgba(59,130,246,.05); }
 .tt-icon { font-size:13px; }
 .tt-val  { font-weight:600; font-family:'Space Mono',monospace; }
 .tt-alert{ font-size:11px; font-weight:700; padding-top:6px; border-top:1px solid #2a3550; }
+.google-map-info{background:#1a2540;color:#e2e8f0;border-radius:8px;padding:10px 12px;min-width:190px;font-family:'Outfit',sans-serif;}
+.map-provider-status{font-size:11px;color:var(--ink3);font-weight:700;white-space:nowrap;}
 
 /* ── FORECAST 24HS ── */
 .forecast-bar{
@@ -635,6 +637,7 @@ body.modal-open{overflow:hidden;}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/google-maps-config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
@@ -753,7 +756,10 @@ body.modal-open{overflow:hidden;}
       <div style="font-size:18px;font-weight:700;">Mapa Meteorológico — UP Salta</div>
       <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Pasá el cursor sobre cada pin para ver el estado del sector</div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;">
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-sm" id="map-provider-google" type="button" onclick="switchMapProvider('google')">Google Maps</button>
+      <button class="btn btn-ghost btn-sm" id="map-provider-osm" type="button" onclick="switchMapProvider('osm')">OpenStreetMap</button>
+      <span class="map-provider-status" id="map-provider-status">Preparando mapa…</span>
       <span style="display:flex;align-items:center;gap:5px;font-size:12px;"><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;"></span>Sin alerta</span>
       <span style="display:flex;align-items:center;gap:5px;font-size:12px;"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;"></span>Con alerta</span>
       <span style="display:flex;align-items:center;gap:5px;font-size:12px;"><span style="width:10px;height:10px;border-radius:50%;background:#64748b;display:inline-block;"></span>Sin datos</span>
@@ -2093,14 +2099,114 @@ function toast(msg, type='ok'){
 }
 
 // ══════════════════════════════════════════════
-// MAP — Leaflet with pins & tooltips
+// MAP — Google Maps with automatic OpenStreetMap fallback
 // ══════════════════════════════════════════════
 let leafletMap = null;
 let leafletMarkers = {};
+let googleMap = null;
+let googleMarkers = {};
+let googleInfoWindow = null;
+let currentMapProvider = null;
+let requestedMapProvider = 'google';
+let googleMapsLoader = null;
+let googleMapsLoaderReject = null;
+let mapInitPromise = null;
+
+function setMapProviderStatus(provider, message){
+  const status = document.getElementById('map-provider-status');
+  const googleButton = document.getElementById('map-provider-google');
+  const osmButton = document.getElementById('map-provider-osm');
+  if(status) status.textContent = message;
+  if(googleButton) googleButton.className = 'btn '+(provider==='google'?'btn-primary':'btn-ghost')+' btn-sm';
+  if(osmButton) osmButton.className = 'btn '+(provider==='osm'?'btn-primary':'btn-ghost')+' btn-sm';
+}
+
+function resetMapContainer(){
+  if(leafletMap){
+    leafletMap.remove();
+    leafletMap = null;
+  }
+  leafletMarkers = {};
+  Object.values(googleMarkers).forEach(marker=>marker.setMap(null));
+  googleMap = null;
+  googleMarkers = {};
+  googleInfoWindow = null;
+  currentMapProvider = null;
+  const container = document.getElementById('map-container');
+  if(container) container.replaceChildren();
+}
+
+function loadGoogleMapsApi(){
+  if(window.google && window.google.maps) return Promise.resolve(window.google.maps);
+  const key = String(window.VISION_GOOGLE_MAPS_API_KEY || '').trim();
+  if(!key) return Promise.reject(new Error('Google Maps no está configurado'));
+  if(googleMapsLoader) return googleMapsLoader;
+
+  googleMapsLoader = new Promise((resolve,reject)=>{
+    googleMapsLoaderReject = reject;
+    window.__visionGoogleMapsReady = ()=>{
+      googleMapsLoaderReject = null;
+      resolve(window.google.maps);
+    };
+    const script = document.createElement('script');
+    script.id = 'vision-google-maps-api';
+    script.async = true;
+    script.defer = true;
+    script.src = 'https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&v=weekly&loading=async&callback=__visionGoogleMapsReady';
+    script.onerror = ()=>reject(new Error('No se pudo cargar Google Maps'));
+    document.head.appendChild(script);
+    setTimeout(()=>reject(new Error('Tiempo de espera agotado al cargar Google Maps')),10000);
+  }).catch(error=>{
+    googleMapsLoader = null;
+    googleMapsLoaderReject = null;
+    const failedScript = document.getElementById('vision-google-maps-api');
+    if(failedScript) failedScript.remove();
+    throw error;
+  });
+  return googleMapsLoader;
+}
+
+window.gm_authFailure = ()=>{
+  if(googleMapsLoaderReject) googleMapsLoaderReject(new Error('La clave de Google Maps fue rechazada'));
+  if(currentMapProvider==='google') activateMapProvider('osm',true);
+};
 
 function initMap(){
-  if(leafletMap){ updateMapMarkers(); return; }
+  updateMapMarkers();
+  if(currentMapProvider){ updateMapMarkers(); return Promise.resolve(); }
+  if(mapInitPromise) return mapInitPromise;
+  mapInitPromise = activateMapProvider(requestedMapProvider).finally(()=>{ mapInitPromise=null; });
+  return mapInitPromise;
+}
 
+async function switchMapProvider(provider){
+  requestedMapProvider = provider==='osm' ? 'osm' : 'google';
+  await activateMapProvider(requestedMapProvider,false);
+}
+
+async function activateMapProvider(provider,automaticFallback){
+  resetMapContainer();
+  if(provider==='google'){
+    setMapProviderStatus('google','Cargando Google Maps…');
+    try{
+      await loadGoogleMapsApi();
+      createGoogleMap();
+      currentMapProvider = 'google';
+      setMapProviderStatus('google','Google Maps · Mapa / Satélite / Relieve');
+      updateMapMarkers();
+      return;
+    }catch(error){
+      console.warn('Google Maps no disponible; se activa OpenStreetMap.',error.message);
+      if(!automaticFallback) toast('Google Maps no disponible. Se utiliza OpenStreetMap.','warn');
+    }
+  }
+  createLeafletMap();
+  currentMapProvider = 'osm';
+  setMapProviderStatus('osm',provider==='google'?'OpenStreetMap · Respaldo automático':'OpenStreetMap · Respaldo');
+  updateMapMarkers();
+}
+
+function createLeafletMap(){
   leafletMap = L.map('map-container', { zoomControl:true }).setView([-24.5, -65.5], 7);
 
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -2133,6 +2239,62 @@ function initMap(){
   });
 
   updateMapMarkers();
+}
+
+function createGoogleMap(){
+  googleMap = new google.maps.Map(document.getElementById('map-container'),{
+    center:{lat:-24.5,lng:-65.5},
+    zoom:7,
+    mapTypeId:'roadmap',
+    mapTypeControl:true,
+    mapTypeControlOptions:{
+      mapTypeIds:['roadmap','satellite','terrain'],
+      style:google.maps.MapTypeControlStyle.HORIZONTAL_BAR
+    },
+    streetViewControl:false,
+    fullscreenControl:true,
+    gestureHandling:'greedy'
+  });
+  googleInfoWindow = new google.maps.InfoWindow();
+
+  SECTORS.forEach(s=>{
+    const cur = weatherData[s.id];
+    const color = !cur ? '#64748b' : getAlerts(cur,s.id).length ? '#ef4444' : '#22c55e';
+    const marker = new google.maps.Circle({
+      map:googleMap,
+      center:{lat:s.lat,lng:s.lon},
+      radius:googleMarkerRadius(s.lat),
+      fillColor:color,
+      fillOpacity:.9,
+      strokeColor:'#ffffff',
+      strokeOpacity:1,
+      strokeWeight:2,
+      clickable:true,
+      zIndex:10
+    });
+    const openInfo = ()=>{
+      googleInfoWindow.setPosition({lat:s.lat,lng:s.lon});
+      googleInfoWindow.setContent('<div class="google-map-info">'+buildTooltip(s)+'</div>');
+      googleInfoWindow.open({map:googleMap});
+    };
+    marker.addListener('mouseover',openInfo);
+    marker.addListener('click',openInfo);
+    googleMarkers[s.id] = marker;
+  });
+  googleMap.addListener('zoom_changed',updateGoogleMarkerRadii);
+}
+
+function googleMarkerRadius(latitude){
+  const zoom = googleMap ? googleMap.getZoom() : 7;
+  const metresPerPixel = 156543.03392*Math.cos(latitude*Math.PI/180)/Math.pow(2,zoom);
+  return Math.max(80,metresPerPixel*10);
+}
+
+function updateGoogleMarkerRadii(){
+  SECTORS.forEach(s=>{
+    const marker = googleMarkers[s.id];
+    if(marker) marker.setRadius(googleMarkerRadius(s.lat));
+  });
 }
 
 function buildTooltip(s){
@@ -2178,6 +2340,16 @@ function updateMapMarkers(){
   }
 
   // Update marker colors and tooltips
+  if(currentMapProvider==='google' && googleMap){
+    SECTORS.forEach(s=>{
+      const marker = googleMarkers[s.id];
+      if(!marker) return;
+      const cur = weatherData[s.id];
+      const color = !cur ? '#64748b' : getAlerts(cur,s.id).length ? '#ef4444' : '#22c55e';
+      marker.setOptions({fillColor:color});
+    });
+    return;
+  }
   if(!leafletMap) return;
   SECTORS.forEach(s=>{
     const marker = leafletMarkers[s.id];
@@ -2191,8 +2363,7 @@ function updateMapMarkers(){
 
 function flyToSector(sectorId){
   const s = SECTORS.find(x=>x.id===sectorId);
-  const marker = leafletMarkers[sectorId];
-  if(!s || !leafletMap) return;
+  if(!s || (!leafletMap && !googleMap)) return;
 
   // Highlight selected chip
   document.querySelectorAll('.map-sector-chip-btn').forEach(c=>c.classList.remove('chip-selected'));
@@ -2200,15 +2371,24 @@ function flyToSector(sectorId){
   chips.forEach(c=>{ if(c.onclick.toString().includes(sectorId)) c.classList.add('chip-selected'); });
 
   // Fly to marker and open tooltip
-  leafletMap.flyTo([s.lat, s.lon], 10, { duration: 0.8 });
-  if(marker){
-    setTimeout(()=>{ marker.openTooltip(); }, 900);
+  if(currentMapProvider==='google' && googleMap){
+    googleMap.panTo({lat:s.lat,lng:s.lon});
+    googleMap.setZoom(10);
+    setTimeout(()=>{
+      googleInfoWindow.setPosition({lat:s.lat,lng:s.lon});
+      googleInfoWindow.setContent('<div class="google-map-info">'+buildTooltip(s)+'</div>');
+      googleInfoWindow.open({map:googleMap});
+    },500);
+  }else{
+    const marker = leafletMarkers[sectorId];
+    leafletMap.flyTo([s.lat, s.lon], 10, { duration: 0.8 });
+    if(marker) setTimeout(()=>{ marker.openTooltip(); }, 900);
   }
 }
 
 function focusSector(sectorId){
   const s = SECTORS.find(x=>x.id===sectorId);
-  if(!s || !leafletMap) return;
+  if(!s || (!leafletMap && !googleMap)) return;
 
   // Highlight selected chip
   document.querySelectorAll('.map-sector-chip-btn').forEach(c=>{
@@ -2221,11 +2401,21 @@ function focusSector(sectorId){
   }
 
   // Fly to sector and open tooltip
-  leafletMap.flyTo([s.lat, s.lon], 10, { duration: 0.8 });
-  setTimeout(()=>{
-    const marker = leafletMarkers[sectorId];
-    if(marker) marker.openTooltip();
-  }, 850);
+  if(currentMapProvider==='google' && googleMap){
+    googleMap.panTo({lat:s.lat,lng:s.lon});
+    googleMap.setZoom(10);
+    setTimeout(()=>{
+      googleInfoWindow.setPosition({lat:s.lat,lng:s.lon});
+      googleInfoWindow.setContent('<div class="google-map-info">'+buildTooltip(s)+'</div>');
+      googleInfoWindow.open({map:googleMap});
+    },500);
+  }else{
+    leafletMap.flyTo([s.lat, s.lon], 10, { duration: 0.8 });
+    setTimeout(()=>{
+      const marker = leafletMarkers[sectorId];
+      if(marker) marker.openTooltip();
+    }, 850);
+  }
 }
 
 // Map init triggered from showTab above
