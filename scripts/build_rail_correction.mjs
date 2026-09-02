@@ -7,6 +7,7 @@ const ramalId = process.argv[2] || 'C15';
 const indexPath = process.argv[3] || 'index.html';
 const samplesPath = process.argv[4] || `rail-analysis/dense/${ramalId}-samples.json`;
 const outputDir = process.argv[5] || 'rail-corrections';
+const junctionOverridesPath = process.argv[6] || 'rail-corrections/junction-overrides.json';
 
 function extractNetwork(source) {
   const marker = 'const NETWORK=';
@@ -66,6 +67,27 @@ const anchors = samples.map(sample => {
     trusted: referenceWeight > 0,
   };
 });
+
+const junctionOverrides = fs.existsSync(junctionOverridesPath)
+  ? JSON.parse(fs.readFileSync(junctionOverridesPath, 'utf8'))
+  : {};
+const startOverride = junctionOverrides[ramalId]?.start;
+if (startOverride) {
+  const firstPoint = ramal.puntos[0];
+  const firstAnchor = anchors[0];
+  const baseStartLat = firstPoint[1] + firstAnchor.dLat;
+  const baseStartLon = firstPoint[2] + firstAnchor.dLon;
+  const extraLat = startOverride.targetLat - baseStartLat;
+  const extraLon = startOverride.targetLon - baseStartLon;
+  for (const anchor of anchors) {
+    const distanceKm = anchor.pk - firstPoint[0];
+    if (distanceKm > startOverride.taperKm) break;
+    const weight = 1 - Math.max(0, distanceKm) / startOverride.taperKm;
+    anchor.dLat += extraLat * weight;
+    anchor.dLon += extraLon * weight;
+    anchor.junctionOverride = startOverride.reference;
+  }
+}
 
 let anchorIndex = 0;
 const corrected = ramal.puntos.map(point => {
