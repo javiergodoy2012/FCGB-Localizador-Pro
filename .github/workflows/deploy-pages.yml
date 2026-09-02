@@ -49,6 +49,7 @@ jobs:
               encoding="utf-8",
           )
           PY
+          python scripts/apply_rail_corrections.py _site/index.html rail-corrections
           python scripts/inject_google_localizador.py _site/index.html
 
       - name: Configure Pages
