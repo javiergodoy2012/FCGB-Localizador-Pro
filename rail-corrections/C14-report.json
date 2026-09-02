@@ -7,13 +7,13 @@
   "maxReferenceDistance": 100,
   "pkPreserved": true,
   "movementMeters": {
-    "median": 4.72828549929803,
-    "p95": 17.156651240488966,
-    "max": 54.43062005243132
+    "median": 4.737142411423651,
+    "p95": 17.215840261881524,
+    "max": 278.25798983505103
   },
   "segmentMeters": {
     "originalMedian": 9.985097430283336,
-    "correctedMedian": 9.98473192151365,
+    "correctedMedian": 9.984889252729275,
     "correctedP99": 15.193931758352102,
     "correctedMax": 59.12652655836377,
     "existingDiscontinuities": 76,
@@ -22,8 +22,8 @@
   "endpoints": {
     "start": [
       1149.819,
-      -24.90916071522785,
-      -65.49220424145877
+      -24.906658509883734,
+      -65.49214605700405
     ],
     "end": [
       1703.736,
