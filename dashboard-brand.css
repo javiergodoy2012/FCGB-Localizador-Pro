@@ -1,0 +1,163 @@
+/* Identidad visual aprobada para Site Visión. */
+.app {
+  isolation: isolate;
+  background:
+    linear-gradient(90deg, rgba(6, 22, 41, .97) 0%, rgba(6, 22, 41, .90) 24%, rgba(6, 22, 41, .98) 48%, rgba(6, 22, 41, .90) 76%, rgba(6, 22, 41, .97) 100%),
+    url("clima/lateral-up-salta-izquierdo.webp") left center / 52% 100% no-repeat,
+    url("clima/lateral-up-salta-derecho.webp") right center / 52% 100% no-repeat !important;
+}
+
+.app > * {
+  position: relative;
+  z-index: 1;
+}
+
+body::before,
+body::after {
+  display: none !important;
+}
+
+.topbar {
+  grid-template-columns: 110px minmax(430px, 1fr) auto !important;
+  grid-template-rows: auto !important;
+  align-items: center !important;
+  background: rgba(10, 35, 66, .94) !important;
+  backdrop-filter: blur(6px);
+}
+
+.logo-box {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  min-height: 92px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+}
+
+.logo-box .logo-img {
+  display: block !important;
+  width: 92px !important;
+  height: 92px !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .28)) !important;
+}
+
+.title-under-logo {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 !important;
+}
+
+.title-under-logo h1 {
+  margin: 0 !important;
+  color: #fff !important;
+  font-size: 25px !important;
+  font-weight: 900 !important;
+  letter-spacing: .02em !important;
+  text-transform: none !important;
+}
+
+.title-under-logo .brand-subtitle {
+  margin: 4px 0 0;
+  color: #f4cf00;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .035em;
+}
+
+.stats-top {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+}
+
+.sidebar,
+.metrics,
+.info-bar {
+  background: rgba(6, 22, 41, .94) !important;
+  backdrop-filter: blur(4px);
+}
+
+.map-card {
+  background: #061629 !important;
+}
+
+.access-mark {
+  width: 72px !important;
+  height: 72px !important;
+  flex: 0 0 72px;
+  border-radius: 18px !important;
+  background: url("site-vision-logo-v2-192.png") center / contain no-repeat !important;
+  font-size: 0 !important;
+}
+
+@media (max-width: 1399px) {
+  .topbar {
+    grid-template-columns: 90px minmax(0, 1fr) !important;
+  }
+
+  .logo-box {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  .logo-box .logo-img {
+    width: 78px !important;
+    height: 78px !important;
+  }
+
+  .title-under-logo {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+  }
+
+  .stats-top {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .app {
+    background: #061629 !important;
+  }
+
+  .topbar {
+    grid-template-columns: 52px minmax(0, 1fr) auto !important;
+    grid-template-rows: auto !important;
+  }
+
+  .logo-box {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    height: 46px !important;
+    min-height: 46px !important;
+  }
+
+  .logo-box .logo-img {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .title-under-logo {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+  }
+
+  .title-under-logo h1 {
+    font-size: 16px !important;
+  }
+
+  .title-under-logo .brand-subtitle {
+    font-size: 9px;
+    line-height: 1.15;
+  }
+
+  .stats-top {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+  }
+}
