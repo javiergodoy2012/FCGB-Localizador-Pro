@@ -1,0 +1,31 @@
+{
+  "ramal": "C13",
+  "sourcePoints": 6363,
+  "anchors": 1062,
+  "pkPreserved": true,
+  "movementMeters": {
+    "median": 2.832127871998107,
+    "p95": 9.033491043306954,
+    "max": 22.20531597975532
+  },
+  "segmentMeters": {
+    "originalMedian": 10.00722847716086,
+    "correctedMedian": 10.008255475621084,
+    "correctedP99": 10.567983363744755,
+    "correctedMax": 11.299949546027909,
+    "existingDiscontinuities": 0,
+    "newDiscontinuities": 0
+  },
+  "endpoints": {
+    "start": [
+      1086.2,
+      -24.673237549751533,
+      -65.04411040782564
+    ],
+    "end": [
+      1149.819,
+      -24.906658509883734,
+      -65.49214605700405
+    ]
+  }
+}
