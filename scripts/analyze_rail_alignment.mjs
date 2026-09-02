@@ -103,7 +103,7 @@ const south = Math.min(...lats) - padding;
 const west = Math.min(...lons) - padding;
 const north = Math.max(...lats) + padding;
 const east = Math.max(...lons) + padding;
-const query = `[out:json][timeout:180];way["railway"~"^(rail|narrow_gauge|disused|abandoned|construction)$"](${south},${west},${north},${east});out tags geom;`;
+const query = `[out:json][timeout:180];(way["railway"~"^(rail|narrow_gauge|disused|abandoned|construction|razed|dismantled)$"](${south},${west},${north},${east});way["disused:railway"~"^(rail|narrow_gauge)$"](${south},${west},${north},${east});way["abandoned:railway"~"^(rail|narrow_gauge)$"](${south},${west},${north},${east}););out tags geom;`;
 
 console.log(`Consultando vías para ${ramalId}: ${south},${west},${north},${east}`);
 const osm = await fetchOverpass(query);
