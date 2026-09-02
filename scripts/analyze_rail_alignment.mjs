@@ -62,15 +62,21 @@ function quantile(sorted, q) {
 
 async function fetchOverpass(query) {
   const endpoints = [
+    'https://overpass.private.coffee/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
     'https://overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter',
   ];
   let lastError;
   for (const endpoint of endpoints) {
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {'content-type': 'application/x-www-form-urlencoded'},
+        headers: {
+          'accept': 'application/json',
+          'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'referer': 'https://upsaltavision.com.ar/',
+          'user-agent': 'UP-Salta-Vision/1.0 (rail alignment validation)',
+        },
         body: new URLSearchParams({data: query}),
         signal: AbortSignal.timeout(240000),
       });
