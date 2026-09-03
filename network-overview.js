@@ -52,29 +52,33 @@
     for (const branch of CAT.ramales) {
       const points = getDisplayPoints(branch.ramal);
       if (!points.length) continue;
+      const inactive = branch.ramal === 'C25';
+      const baseWeight = inactive ? 2 : 4;
+      const hoverWeight = inactive ? 4 : 7;
 
       const line = L.polyline(points, {
         color: OVERVIEW_COLOR,
-        weight: 4,
-        opacity: 0.92,
+        weight: baseWeight,
+        opacity: inactive ? 0.72 : 0.92,
         smoothFactor: 1,
         interactive: true
       }).addTo(backgroundRoutes);
 
       line.bindTooltip(
         `<b>Ramal ${escapeHtml(branch.ramal)}</b><br>` +
+        (inactive ? '<span>Ramal inactivo</span><br>' : '') +
         `km ${fmtPk(branch.km_inicio)} → ${fmtPk(branch.km_fin)}<br>` +
         '<span>Hacé clic para seleccionar</span>',
         { sticky: true, direction: 'top', opacity: 0.98, className: 'ramal-km-tooltip' }
       );
 
       line.on('mouseover', function () {
-        this.setStyle({ color: HOVER_COLOR, weight: 7, opacity: 1 });
+        this.setStyle({ color: HOVER_COLOR, weight: hoverWeight, opacity: 1 });
         this.bringToFront();
         map.getContainer().style.cursor = 'pointer';
       });
       line.on('mouseout', function () {
-        this.setStyle({ color: OVERVIEW_COLOR, weight: 4, opacity: 0.92 });
+        this.setStyle({ color: OVERVIEW_COLOR, weight: baseWeight, opacity: inactive ? 0.72 : 0.92 });
         map.getContainer().style.cursor = '';
       });
       line.on('click', function () {
@@ -104,6 +108,13 @@
   overviewOption.value = OVERVIEW_VALUE;
   overviewOption.textContent = 'Vista general UP Salta · 7 ramales';
   ramalSelect.insertBefore(overviewOption, ramalSelect.firstChild);
+
+  ramalSelect.addEventListener('change', function (event) {
+    if (ramalSelect.value !== OVERVIEW_VALUE) return;
+    event.stopImmediatePropagation();
+    showNetworkOverview();
+  }, true);
+
   ramalSelect.value = OVERVIEW_VALUE;
   showNetworkOverview();
 })();
