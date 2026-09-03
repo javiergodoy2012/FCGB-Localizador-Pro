@@ -13,6 +13,7 @@
   if (!ramalSelect || typeof map === 'undefined' || typeof changeRamal !== 'function') return;
 
   const originalChangeRamal = changeRamal;
+  const originalDrawRamalPreview = drawRamalPreview;
 
   function setSearchEnabled(enabled) {
     if (kmInput) {
@@ -38,7 +39,7 @@
     ramalSelect.focus({ preventScroll: true });
   }
 
-  function pointsForSection(branch, startPk, endPk) {
+  function samplesForSection(branch, startPk, endPk) {
     const samples = getDisplaySamples(branch.ramal)
       .filter(point => point.pk >= startPk && point.pk <= endPk);
     const source = NETWORK[branch.ramal].puntos;
@@ -48,7 +49,11 @@
     }
     samples.sort((a, b) => a.pk - b.pk);
     return samples
-      .filter((point, index) => !index || point.pk !== samples[index - 1].pk)
+      .filter((point, index) => !index || point.pk !== samples[index - 1].pk);
+  }
+
+  function pointsForSection(branch, startPk, endPk) {
+    return samplesForSection(branch, startPk, endPk)
       .map(point => [point.lat, point.lon]);
   }
 
@@ -67,6 +72,68 @@
       inactive: branch.ramal === 'C25'
     }];
   }
+
+  function drawSegmentedRamalPreview(ramal, fit) {
+    const branch = CAT.ramales.find(item => item.ramal === ramal);
+    if (!branch) return;
+    drawBackgroundRoutes(ramal);
+    if (routeLine) map.removeLayer(routeLine);
+    routeLine = L.featureGroup().addTo(map);
+
+    for (const section of overviewSections(branch)) {
+      const samples = samplesForSection(branch, section.start, section.end);
+      const points = samples.map(point => [point.lat, point.lon]);
+      if (points.length < 2) continue;
+      const weight = section.inactive ? 2 : 5;
+      const line = L.polyline(points, {
+        color: OVERVIEW_COLOR,
+        weight,
+        opacity: section.inactive ? 0.72 : 1,
+        smoothFactor: 1,
+        interactive: true
+      }).addTo(routeLine);
+
+      line.bindTooltip('', {
+        sticky: true,
+        direction: 'top',
+        opacity: 0.98,
+        className: 'ramal-km-tooltip'
+      });
+      line.on('mousemove', event => {
+        if (currentMode !== 'localizador') return;
+        const sample = nearestSample(samples, event.latlng);
+        if (!sample) return;
+        line.setTooltipContent(
+          `<b>Ramal ${escapeHtml(ramal)}</b><br>` +
+          `<span>Sector ${section.status.toLowerCase()}</span><br>` +
+          `km ${fmtPk(sample.pk)}`
+        );
+        line.openTooltip(event.latlng);
+      });
+      line.on('mouseout', () => line.closeTooltip());
+      line.on('click', event => {
+        if (currentMode !== 'localizador') return;
+        const sample = nearestSample(samples, event.latlng);
+        if (!sample) return;
+        ramalSelect.value = ramal;
+        kmInput.value = sample.pk.toFixed(3).replace('.', ',');
+        buscar();
+      });
+      line.bringToFront();
+    }
+
+    if (fit && routeLine.getBounds().isValid()) {
+      map.fitBounds(routeLine.getBounds(), { padding: [20, 20] });
+    }
+  }
+
+  drawRamalPreview = function (ramal, fit = true) {
+    if (ramal === 'C15' || ramal === 'C25') {
+      drawSegmentedRamalPreview(ramal, fit);
+      return;
+    }
+    originalDrawRamalPreview(ramal, fit);
+  };
 
   function showNetworkOverview() {
     resetPreviousResult();
