@@ -58,6 +58,12 @@
   }
 
   function overviewSections(branch) {
+    if (branch.ramal === 'C') {
+      return [
+        { start: branch.km_inicio, end: 1142.149, status: 'Activo', inactive: false },
+        { start: 1142.150, end: 1152.000, status: 'Inactivo', inactive: true }
+      ];
+    }
     if (branch.ramal === 'C15') {
       return [
         { start: 1120.846, end: 1364.500, status: 'Activo', inactive: false },
@@ -128,7 +134,7 @@
   }
 
   drawRamalPreview = function (ramal, fit = true) {
-    if (ramal === 'C15' || ramal === 'C25') {
+    if (ramal === 'C' || ramal === 'C15' || ramal === 'C25') {
       drawSegmentedRamalPreview(ramal, fit);
       return;
     }
