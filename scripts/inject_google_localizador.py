@@ -8,7 +8,84 @@ import sys
 SCRIPT_ANCHOR = '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>'
 SCRIPT_INJECTION = """<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/google-maps-config.js"></script>
-<script src="/Leaflet.GoogleMutant.js"></script>"""
+<script src="/Leaflet.GoogleMutant.js"></script>
+<style id="vision-layer-control-style">
+#map .leaflet-control-layers{
+  min-width:218px;
+  overflow:hidden;
+  border:1px solid rgba(115,183,255,.46);
+  border-radius:10px;
+  background:rgba(7,27,49,.96);
+  color:#eaf2ff;
+  box-shadow:0 10px 28px rgba(0,0,0,.34);
+  font:600 13px/1.25 "Segoe UI",Roboto,Arial,sans-serif;
+  backdrop-filter:blur(8px);
+}
+#map .leaflet-control-layers:not(.leaflet-control-layers-expanded){min-width:0}
+#map .leaflet-control-layers-expanded{padding:9px}
+#map .leaflet-control-layers-toggle{
+  width:38px;
+  height:38px;
+  border-radius:8px;
+  background-color:#0d3158;
+  background-size:22px 22px;
+}
+#map .leaflet-control-layers-list{margin:0}
+#map .leaflet-control-layers-base::before,
+#map .leaflet-control-layers-overlays::before{
+  display:block;
+  padding:4px 9px 5px;
+  color:#73b7ff;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+}
+#map .leaflet-control-layers-base::before{content:"Mapa base"}
+#map .leaflet-control-layers-overlays::before{content:"Capas"}
+#map .leaflet-control-layers label{
+  display:block;
+  margin:0;
+  border-radius:7px;
+  cursor:pointer;
+}
+#map .leaflet-control-layers label:hover{background:rgba(47,128,237,.18)}
+#map .leaflet-control-layers label > span{
+  display:flex;
+  align-items:center;
+  min-height:32px;
+  padding:5px 9px;
+  gap:9px;
+}
+#map .leaflet-control-layers-selector{
+  display:inline-block!important;
+  flex:0 0 16px;
+  width:16px!important;
+  height:16px!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:50%;
+  background:none!important;
+  box-shadow:none!important;
+  accent-color:#2f80ed;
+}
+#map .leaflet-control-layers-separator{
+  height:1px;
+  margin:7px 5px;
+  border:0;
+  background:rgba(255,255,255,.14);
+}
+#map .leaflet-control-layers label:focus-within{
+  outline:2px solid #ffc928;
+  outline-offset:-2px;
+}
+@media(max-width:760px){
+  #map .leaflet-control-layers{min-width:205px;max-width:calc(100vw - 28px)}
+  #map .leaflet-control-layers-expanded{padding:7px}
+  #map .leaflet-control-layers label > span{min-height:30px;padding:4px 7px}
+}
+</style>"""
 
 MAP_ANCHOR = """const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
 const rail=L.tileLayer('https://tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png',{maxZoom:19,opacity:.45,attribution:'OpenRailwayMap'}).addTo(map);
