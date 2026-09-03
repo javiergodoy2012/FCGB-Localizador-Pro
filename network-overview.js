@@ -60,9 +60,9 @@
   function overviewSections(branch) {
     if (branch.ramal === 'C15') {
       return [
-        { start: 1120.846, end: 1354.500, status: 'Activo', inactive: false },
-        { start: 1354.501, end: 1354.900, status: 'Inactivo', inactive: true },
-        { start: 1354.901, end: 1456.200, status: 'Activo', inactive: false }
+        { start: 1120.846, end: 1364.500, status: 'Activo', inactive: false },
+        { start: 1364.501, end: 1454.900, status: 'Inactivo', inactive: true },
+        { start: 1454.901, end: 1456.200, status: 'Activo', inactive: false }
       ];
     }
     return [{
