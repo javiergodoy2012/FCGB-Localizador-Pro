@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 
-SCRIPT_TAG = '<script src="network-overview.js?v=7"></script>\n'
+SCRIPT_TAG = '<script src="network-overview.js?v=8"></script>\n'
 OLD_CHANGE_HANDLER = "$('ramal').addEventListener('change',changeRamal);"
 NEW_CHANGE_HANDLER = "$('ramal').addEventListener('change',()=>changeRamal());"
 

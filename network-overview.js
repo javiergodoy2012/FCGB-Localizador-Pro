@@ -74,8 +74,8 @@
     return [{
       start: branch.km_inicio,
       end: branch.km_fin,
-      status: branch.ramal === 'C25' ? 'Inactivo' : '',
-      inactive: branch.ramal === 'C25'
+      status: branch.ramal === 'C16' || branch.ramal === 'C25' ? 'Inactivo' : '',
+      inactive: branch.ramal === 'C16' || branch.ramal === 'C25'
     }];
   }
 
@@ -134,7 +134,7 @@
   }
 
   drawRamalPreview = function (ramal, fit = true) {
-    if (ramal === 'C' || ramal === 'C15' || ramal === 'C25') {
+    if (ramal === 'C' || ramal === 'C15' || ramal === 'C16' || ramal === 'C25') {
       drawSegmentedRamalPreview(ramal, fit);
       return;
     }
