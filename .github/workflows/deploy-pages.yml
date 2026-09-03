@@ -53,6 +53,7 @@ jobs:
           python scripts/inject_google_localizador.py _site/index.html
           python scripts/apply_dashboard_brand.py _site/index.html
           python scripts/inject_network_overview.py _site/index.html
+          python scripts/prioritize_access_startup.py _site/index.html
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
