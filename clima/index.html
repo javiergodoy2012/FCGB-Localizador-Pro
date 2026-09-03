@@ -3292,6 +3292,23 @@ async function savePushDevice(user,token){
     await db.collection('usuarios').doc(user.uid).collection('dispositivos').doc(previousId).delete().catch(()=>false);
   }
   localStorage.setItem(CLIMA_PUSH_DEVICE_KEY,deviceId);
+  return deviceId;
+}
+
+async function callClimaPushFunction(user,data={}){
+  if(!user)throw Object.assign(new Error('Volvé a iniciar sesión antes de continuar.'),{code:'functions/unauthenticated'});
+  const idToken=await user.getIdToken();
+  const response=await fetch('https://southamerica-east1-up-salta-vision.cloudfunctions.net/probarPushClimaAlert',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${idToken}`},
+    body:JSON.stringify({data})
+  });
+  const payload=await response.json().catch(()=>({}));
+  if(!response.ok||payload.error){
+    const status=String(payload.error?.status||'internal').toLowerCase().replace(/_/g,'-');
+    throw Object.assign(new Error(payload.error?.message||'No se pudo completar la solicitud.'),{code:`functions/${status}`});
+  }
+  return payload.result||payload.data||{};
 }
 
 function pushActivationError(error){
@@ -3337,9 +3354,19 @@ async function activateClimaPush(){
     const token=await messaging.getToken({vapidKey,serviceWorkerRegistration:registration});
     if(!token)throw new Error('TOKEN_NOT_AVAILABLE');
     stage='guardado';
-    await savePushDevice(user,token);
-    setPushUi('active','Notificaciones activas en este dispositivo. Recibirás solo alertas nuevas o cambios importantes.');
-    toast('🔔 Notificaciones activadas','ok');
+    const deviceId=await savePushDevice(user,token);
+    let syncResult=null;
+    try{
+      stage='sincronizacion';
+      syncResult=await callClimaPushFunction(user,{mode:'current-alerts',deviceId});
+    }catch(syncError){
+      console.warn('El dispositivo quedó activo, pero no se pudieron sincronizar las alertas vigentes',syncError);
+    }
+    const activeAlerts=Number(syncResult?.activeAlerts||0);
+    setPushUi('active',activeAlerts
+      ?`Notificaciones activas. Se enviaron las alertas vigentes y recibirás cambios o recordatorios cada 3 horas.`
+      :'Notificaciones activas en este dispositivo. Recibirás alertas nuevas, cambios y recordatorios cada 3 horas.');
+    toast(activeAlerts?'🔔 Notificaciones activadas · alertas vigentes enviadas':'🔔 Notificaciones activadas','ok');
   }catch(error){
     console.error('No se pudo activar Clima Alert Push',error);
     const detail=pushActivationError(error);
@@ -3365,18 +3392,7 @@ async function testClimaPush(){
   if(button){button.disabled=true;button.textContent='Enviando…';}
   try{
     const user=firebase.app().auth().currentUser;
-    if(!user)throw Object.assign(new Error('Volvé a iniciar sesión antes de enviar la prueba.'),{code:'functions/unauthenticated'});
-    const idToken=await user.getIdToken();
-    const response=await fetch('https://southamerica-east1-up-salta-vision.cloudfunctions.net/probarPushClimaAlert',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':`Bearer ${idToken}`},
-      body:JSON.stringify({data:{}})
-    });
-    const payload=await response.json().catch(()=>({}));
-    if(!response.ok||payload.error){
-      const status=String(payload.error?.status||'internal').toLowerCase().replace(/_/g,'-');
-      throw Object.assign(new Error(payload.error?.message||'No se pudo enviar la prueba.'),{code:`functions/${status}`});
-    }
+    await callClimaPushFunction(user,{});
     toast('🔔 Prueba enviada al teléfono','ok');
   }catch(error){
     const messages={
@@ -3400,7 +3416,7 @@ async function refreshPushState(user){
   const deviceId=localStorage.getItem(CLIMA_PUSH_DEVICE_KEY);
   if(deviceId&&Notification.permission==='granted'){
     const doc=await firebase.app().firestore().collection('usuarios').doc(user.uid).collection('dispositivos').doc(deviceId).get().catch(()=>null);
-    if(doc?.exists){setPushUi('active','Notificaciones activas en este dispositivo. Recibirás solo alertas nuevas o cambios importantes.');return;}
+    if(doc?.exists){setPushUi('active','Notificaciones activas en este dispositivo. Recibirás alertas nuevas, cambios y recordatorios cada 3 horas.');return;}
   }
   setPushUi('idle','Activá las notificaciones para recibir alertas aun con la página cerrada.');
 }
