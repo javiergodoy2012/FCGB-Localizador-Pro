@@ -38,6 +38,36 @@
     ramalSelect.focus({ preventScroll: true });
   }
 
+  function pointsForSection(branch, startPk, endPk) {
+    const samples = getDisplaySamples(branch.ramal)
+      .filter(point => point.pk >= startPk && point.pk <= endPk);
+    const source = NETWORK[branch.ramal].puntos;
+    for (const pk of [startPk, endPk]) {
+      const point = findPoint(source, pk);
+      if (point) samples.push({ pk, lat: Number(point[1]), lon: Number(point[2]) });
+    }
+    samples.sort((a, b) => a.pk - b.pk);
+    return samples
+      .filter((point, index) => !index || point.pk !== samples[index - 1].pk)
+      .map(point => [point.lat, point.lon]);
+  }
+
+  function overviewSections(branch) {
+    if (branch.ramal === 'C15') {
+      return [
+        { start: 1120.846, end: 1354.500, status: 'Activo', inactive: false },
+        { start: 1354.501, end: 1354.900, status: 'Inactivo', inactive: true },
+        { start: 1354.901, end: 1456.200, status: 'Activo', inactive: false }
+      ];
+    }
+    return [{
+      start: branch.km_inicio,
+      end: branch.km_fin,
+      status: branch.ramal === 'C25' ? 'Inactivo' : '',
+      inactive: branch.ramal === 'C25'
+    }];
+  }
+
   function showNetworkOverview() {
     resetPreviousResult();
     setSearchEnabled(false);
@@ -50,43 +80,44 @@
 
     const bounds = L.latLngBounds([]);
     for (const branch of CAT.ramales) {
-      const points = getDisplayPoints(branch.ramal);
-      if (!points.length) continue;
-      const inactive = branch.ramal === 'C25';
-      const baseWeight = inactive ? 2 : 4;
-      const hoverWeight = inactive ? 4 : 7;
+      for (const section of overviewSections(branch)) {
+        const points = pointsForSection(branch, section.start, section.end);
+        if (!points.length) continue;
+        const baseWeight = section.inactive ? 2 : 4;
+        const hoverWeight = section.inactive ? 4 : 7;
 
-      const line = L.polyline(points, {
-        color: OVERVIEW_COLOR,
-        weight: baseWeight,
-        opacity: inactive ? 0.72 : 0.92,
-        smoothFactor: 1,
-        interactive: true
-      }).addTo(backgroundRoutes);
+        const line = L.polyline(points, {
+          color: OVERVIEW_COLOR,
+          weight: baseWeight,
+          opacity: section.inactive ? 0.72 : 0.92,
+          smoothFactor: 1,
+          interactive: true
+        }).addTo(backgroundRoutes);
 
-      line.bindTooltip(
-        `<b>Ramal ${escapeHtml(branch.ramal)}</b><br>` +
-        (inactive ? '<span>Ramal inactivo</span><br>' : '') +
-        `km ${fmtPk(branch.km_inicio)} → ${fmtPk(branch.km_fin)}<br>` +
-        '<span>Hacé clic para seleccionar</span>',
-        { sticky: true, direction: 'top', opacity: 0.98, className: 'ramal-km-tooltip' }
-      );
+        line.bindTooltip(
+          `<b>Ramal ${escapeHtml(branch.ramal)}</b><br>` +
+          (section.status ? `<span>Sector ${section.status.toLowerCase()}</span><br>` : '') +
+          `km ${fmtPk(section.start)} → ${fmtPk(section.end)}<br>` +
+          '<span>Hacé clic para seleccionar</span>',
+          { sticky: true, direction: 'top', opacity: 0.98, className: 'ramal-km-tooltip' }
+        );
 
-      line.on('mouseover', function () {
-        this.setStyle({ color: HOVER_COLOR, weight: hoverWeight, opacity: 1 });
-        this.bringToFront();
-        map.getContainer().style.cursor = 'pointer';
-      });
-      line.on('mouseout', function () {
-        this.setStyle({ color: OVERVIEW_COLOR, weight: baseWeight, opacity: inactive ? 0.72 : 0.92 });
-        map.getContainer().style.cursor = '';
-      });
-      line.on('click', function () {
-        map.getContainer().style.cursor = '';
-        selectRamal(branch.ramal);
-      });
+        line.on('mouseover', function () {
+          this.setStyle({ color: HOVER_COLOR, weight: hoverWeight, opacity: 1 });
+          this.bringToFront();
+          map.getContainer().style.cursor = 'pointer';
+        });
+        line.on('mouseout', function () {
+          this.setStyle({ color: OVERVIEW_COLOR, weight: baseWeight, opacity: section.inactive ? 0.72 : 0.92 });
+          map.getContainer().style.cursor = '';
+        });
+        line.on('click', function () {
+          map.getContainer().style.cursor = '';
+          selectRamal(branch.ramal);
+        });
 
-      bounds.extend(line.getBounds());
+        bounds.extend(line.getBounds());
+      }
     }
 
     if (status) {
