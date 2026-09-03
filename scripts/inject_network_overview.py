@@ -7,7 +7,9 @@ import sys
 from pathlib import Path
 
 
-SCRIPT_TAG = '<script src="network-overview.js"></script>\n'
+SCRIPT_TAG = '<script src="network-overview.js?v=3"></script>\n'
+OLD_CHANGE_HANDLER = "$('ramal').addEventListener('change',changeRamal);"
+NEW_CHANGE_HANDLER = "$('ramal').addEventListener('change',()=>changeRamal());"
 
 
 def main() -> None:
@@ -19,6 +21,10 @@ def main() -> None:
 
     if SCRIPT_TAG in html:
         raise SystemExit("La vista general ya está incorporada en el documento.")
+
+    if html.count(OLD_CHANGE_HANDLER) != 1:
+        raise SystemExit("No se encontró un único manejador del selector de ramales.")
+    html = html.replace(OLD_CHANGE_HANDLER, NEW_CHANGE_HANDLER, 1)
 
     marker = '<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>'
     if html.count(marker) != 1:
