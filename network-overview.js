@@ -1,6 +1,24 @@
 (function () {
   'use strict';
 
+  function loadSiteAssistant() {
+    if (!document.querySelector('link[data-site-assistant]')) {
+      const style = document.createElement('link');
+      style.rel = 'stylesheet';
+      style.href = '/site-assistant.css';
+      style.dataset.siteAssistant = 'true';
+      document.head.appendChild(style);
+    }
+    if (!document.getElementById('site-assistant-script')) {
+      const script = document.createElement('script');
+      script.id = 'site-assistant-script';
+      script.src = '/site-assistant.js';
+      document.body.appendChild(script);
+    }
+  }
+
+  loadSiteAssistant();
+
   const OVERVIEW_VALUE = '__up_salta_overview__';
   const OVERVIEW_COLOR = '#2F80ED';
   const HOVER_COLOR = '#73B7FF';
